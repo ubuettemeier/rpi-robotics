@@ -1,4 +1,4 @@
-All about robots. Sensors, image recognition, drives, etc.
+Everything about robots. Sensors, image recognition, drives, etc.
 
 // ---------------------------------------------------------------------------------------
-Alles um Roboter. Sensoren, Bilderkennung, Antriebe, usw.
+Alles zum Thema Roboter. Sensoren, Bilderkennung, Antriebe, usw.
