@@ -4,13 +4,13 @@ CC = gcc
 CFLAGS = -Wall -c -O0 -DNDEBUG
 FLAGS =
 INC=
-LDFLAGS = -lpthread -lrt -lwiringPi
+LDFLAGS =
 
-FILENAME = test_hc_sr04
+FILENAME = test_i2c
 OUTPUTFOLDER = ../build
 
-SOURCE = $(FILENAME).c hc_sr04.c keypressed.c
-HEADER = hc_sr04.h keypressed.h
+SOURCE = $(FILENAME).c 
+HEADER =
 QUELLE = $(SOURCE) $(HEADER)
 
 OBJ	= $(SOURCE:.c=.o)

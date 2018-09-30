@@ -11,9 +11,6 @@ script's
 - source/edit.sh => opens the source files with geany
 - source/run.sh => starts the program build/test_laser_sensor
 
-
-Translated with www.DeepL.com/Translator
-
 // ---------------------------------------------------------------------
 Die Software für den laser sensor ist auf den Raspberry Pi 3 B entwickelt.
 Als gpio-Treiber wird die wiringPi Library verwendet.
