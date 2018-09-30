@@ -36,6 +36,8 @@
 *.x86_64
 *.hex
 test_hc_sr04
+test_laser_sensor
+test_12c
 
 # Debug files
 *.dSYM/
