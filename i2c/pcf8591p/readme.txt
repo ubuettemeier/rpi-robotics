@@ -1,7 +1,10 @@
-The software for I2C handling is developed for the Raspberry Pi 3 B.
+The software for I2C handling has been developed on the Raspberry Pi 3 B.
 The programs work with the I2C kernel modules i2c_dev and i2c_bcm.
 The I2C bus 1 is used. 
 The corresponding pins are SDA.1=Pin 3, SCL.1=Pin 5.
+
+The PCF8591 is an 8-bit A/D and D/A converter. It has 4 ADC's and 1 DAC.
+The IC is addressed via the I2C bus. The base address is 0x48.
 
 script's
 - source/edit.sh => opens the source files with geany
@@ -12,6 +15,9 @@ Die Software für I2C Handling ist auf den Raspberry Pi 3 B entwickelt.
 Die Programme arbeiten mit den I2C-Kernelmodulen i2c_dev und i2c_bcm.
 Es wird der I2C-Bus 1 genutzt. 
 Die ensprechenden Pin's sind SDA.1=Pin 3, SCL.1=Pin 5.
+
+Der PCF8591 ist ein 8-Bit A/D- und D/A Wandler. Er verfügt über 4 ADC's und 1 DAC.
+Der Baustein wird über den I2C Bus angesprochen. Die Basisadresse ist 0x48.
 
 script's
 - source/edit.sh => öffnet die Source Files mit geany
