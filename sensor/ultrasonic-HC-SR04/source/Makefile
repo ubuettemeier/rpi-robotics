@@ -7,25 +7,43 @@ INC=
 LDFLAGS = -lpthread -lrt -lwiringPi
 
 FILENAME = test_hc_sr04
-OUTPUTFOLDER = ../build
 
-SOURCE = $(FILENAME).c hc_sr04.c keypressed.c
-HEADER = hc_sr04.h keypressed.h
-QUELLE = $(SOURCE) $(HEADER)
+# ----------------------------------------------------------------------
+# Source files
+# ----------------------------------------------------------------------
+SRC = \
+$(FILENAME).c \
+hc_sr04.c \
+keypressed.c
 
-OBJ	= $(SOURCE:.c=.o)
-BIN = $(FILENAME)
+# ----------------------------------------------------------------------
+# Header files
+# ----------------------------------------------------------------------
+HEADER = \
+hc_sr04.h \
+keypressed.h
+
+# ---------------------------------------------------------------------- 
+# Object files
+# ----------------------------------------------------------------------
+OBJ = \
+../build/$(FILENAME).o \
+../build/hc_sr04.o \
+../build/keypressed.o
+
+# ---------------------------------------------------------------------- 
+# binary code
+# ----------------------------------------------------------------------
+BIN = ../build/$(FILENAME)
+
 
 $(BIN): $(OBJ)
-	$(CC) -o $(BIN) $(OBJ) $(LDFLAGS)
-	mv *.o $(OUTPUTFOLDER)
-	mv $(FILENAME) $(OUTPUTFOLDER)
+	$(CC) -o $(BIN) $(LDFLAGS)  $(OBJ) 
 
-$(OBJ): $(QUELLE) $(HEADER)	
-	$(CC) $(CFLAGS) $(FLAGS) $(INC) $(SOURCE)
+$(OBJ) : $(SRC) $(HEADER)
+	$(CC) -c $(CFLAGS) $(SRC)
+	mv *.o ../build
 
 .PHONEY:	clean
 clean:
-	rm -rf $(OBJ)
-	rm -rf $(FILENAME)
-
+	rm -rf $(OBJ) $(BIN)

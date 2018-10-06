@@ -13,6 +13,12 @@ SRC = \
 $(FILENAME).c \
 ../../../sensor/ultrasonic-HC-SR04/source/keypressed.c
 
+# ----------------------------------------------------------------------
+# Header files
+# ----------------------------------------------------------------------
+HEADER = \
+../../../sensor/ultrasonic-HC-SR04/source/keypressed.h
+
 # ---------------------------------------------------------------------- 
 # Object files
 # ----------------------------------------------------------------------
@@ -27,9 +33,9 @@ BIN = ../build/$(FILENAME)
 
 
 $(BIN): $(OBJ)
-	$(CC) -o $(LDFLAGS) $(BIN) $(OBJ)
+	$(CC) -o $(BIN) $(LDFLAGS) $(OBJ)
 
-$(OBJ) : $(SRC)
+$(OBJ) : $(SRC) $(HEADER)
 	$(CC) -c $(CFLAGS) $(SRC)
 	mv *.o ../build
 

@@ -3,7 +3,7 @@
  * @date    09.16.2018
  * @name    Ulrich Buettemeier
  */
-
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
