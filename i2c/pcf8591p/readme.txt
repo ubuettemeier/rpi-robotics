@@ -8,7 +8,7 @@ The IC is addressed via the I2C bus. The base address is 0x48.
 
 script's
 - source/edit.sh => opens the source files with geany
-- source/run.sh => starts the program build/test_laser_sensor
+- source/run.sh => starts the program build/test_i2c_pcf8591
 
 // ---------------------------------------------------------------------
 Die Software für I2C Handling ist auf den Raspberry Pi 3 B entwickelt.
@@ -21,4 +21,4 @@ Der Baustein wird über den I2C Bus angesprochen. Die Basisadresse ist 0x48.
 
 script's
 - source/edit.sh => öffnet die Source Files mit geany
-- source/run.sh => startet das Programm build/test_laser_sensor
+- source/run.sh => startet das Programm build/test_i2c_pcf8591

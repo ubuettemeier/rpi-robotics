@@ -2,30 +2,37 @@
 CC = gcc
 
 CFLAGS = -Wall -c -O0 -DNDEBUG
-FLAGS =
-INC=
 LDFLAGS =
 
 FILENAME = test_i2c_pcf8591
-OUTPUTFOLDER = ../build
 
-SOURCE = $(FILENAME).c 
-HEADER =
-QUELLE = $(SOURCE) $(HEADER)
+# ----------------------------------------------------------------------
+# Source files
+# ----------------------------------------------------------------------
+SRC = \
+$(FILENAME).c \
+../../../sensor/ultrasonic-HC-SR04/source/keypressed.c
 
-OBJ	= $(SOURCE:.c=.o)
-BIN = $(FILENAME)
+# ---------------------------------------------------------------------- 
+# Object files
+# ----------------------------------------------------------------------
+OBJ = \
+../build/$(FILENAME).o \
+../build/keypressed.o
+
+# ---------------------------------------------------------------------- 
+# binary code
+# ----------------------------------------------------------------------
+BIN = ../build/$(FILENAME)
+
 
 $(BIN): $(OBJ)
-	$(CC) -o $(BIN) $(OBJ) $(LDFLAGS)
-	mv *.o $(OUTPUTFOLDER)
-	mv $(FILENAME) $(OUTPUTFOLDER)
+	$(CC) -o $(LDFLAGS) $(BIN) $(OBJ)
 
-$(OBJ): $(QUELLE) $(HEADER)	
-	$(CC) $(CFLAGS) $(FLAGS) $(INC) $(SOURCE)
+$(OBJ) : $(SRC)
+	$(CC) -c $(CFLAGS) $(SRC)
+	mv *.o ../build
 
 .PHONEY:	clean
 clean:
-	rm -rf $(OBJ)
-	rm -rf $(FILENAME)
-
+	rm -rf $(OBJ) $(BIN)
