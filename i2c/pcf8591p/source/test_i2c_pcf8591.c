@@ -44,10 +44,26 @@ static void abort_by_error (const char *error_text, const char *func_name)
  */
 int set_ADC_channel (int fd, uint8_t channel)
 {
-    if (fd < 0) return EXIT_FAILURE;           /* check device */
-    i2c_smbus_read_byte_data( fd, channel );    /* Set ADC channel and read out previous ADC value */
+    int ret; 
     
-    return (EXIT_SUCCESS);
+    if (fd < 0) return ( EXIT_FAILURE );           /* check device */
+    ret = i2c_smbus_read_byte_data( fd, channel );    /* Set ADC channel and read out previous ADC value */
+    
+    if (ret < 0) return ( EXIT_FAILURE );    
+    return ( EXIT_SUCCESS );
+}
+/*! --------------------------------------------------------------------
+ *  @brief  Function sets new DAC value
+ */
+int set_DAC_value (int fd, uint8_t value)
+{
+    int ret;
+    
+    if (fd < 0) return ( EXIT_FAILURE );           /* check device */
+    ret = i2c_smbus_write_byte_data (fd, 0x40, value);
+    
+    if (ret < 0) return ( EXIT_FAILURE );    
+    return ( EXIT_SUCCESS );
 }
 /*! --------------------------------------------------------------------
  *
@@ -58,6 +74,7 @@ int main(int argc, char *argv[])
     char buf[256];
     char c;
     int taste = 0;
+    uint8_t foo = 127;
     
     printf ("Exit with ESC\nNext measurement with any key\n");
     
@@ -71,21 +88,24 @@ int main(int argc, char *argv[])
         abort_by_error (buf, __func__);
     }
 
-    while (1) {
+
+    while (1) {        
         set_ADC_channel ( device, ADC0 );     /* select ADC channel 0 */
         res = i2c_smbus_read_byte (device);   /* read ADC0 */
-        printf ("ADC0=%3i ", res);
-    
+        printf ("ADC0=%3i  ", res);
+        
         set_ADC_channel ( device, ADC1 );     /* select ADC channel 1 */
         res = i2c_smbus_read_byte (device);   /* read ADC1 */
         printf ("ADC1=%3i\n", res);
+        
+        set_DAC_value (device, (foo += 0x10));    /* set new DAC value */
         
         usleep (10000);                       /* wait 10 ms */
         
         while ((taste = check_keypressed(&c)) <= 0);  /* wait for keypressed */
         if (c == 27) break;                           /* quit by ESC */
     }
-    
+    set_DAC_value (device, 0);
     close (device);
     
     destroy_check_keypressed();              /* destroy key-touch control */
