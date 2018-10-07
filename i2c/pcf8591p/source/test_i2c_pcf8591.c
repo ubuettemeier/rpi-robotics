@@ -41,40 +41,45 @@ static void abort_by_error (const char *error_text, const char *func_name)
  *
  *  @param   fd = file discriptor
  *            channel = ADC channel
+ * 
+ *  @return  returning negative errno else a data byte received from the device.
  */
 int set_ADC_channel (int fd, uint8_t channel)
 {
     int ret; 
     
-    if (fd < 0) return ( EXIT_FAILURE );           /* check device */
+    if (fd < 0) return ( -1 );                       /* check device */
     ret = i2c_smbus_read_byte_data( fd, channel );    /* Set ADC channel and read out previous ADC value */
     
-    if (ret < 0) return ( EXIT_FAILURE );    
-    return ( EXIT_SUCCESS );
+    return ( ret );
 }
 /*! --------------------------------------------------------------------
  *  @brief  Function sets new DAC value
+ * 
+ *  @param   fd = file discriptor
+ *            value = DAC Value
+ *
+ *  @return Zero on success. Negative errno by failure
  */
 int set_DAC_value (int fd, uint8_t value)
 {
     int ret;
     
-    if (fd < 0) return ( EXIT_FAILURE );           /* check device */
+    if (fd < 0) return ( -1 );                           /* check device */
     ret = i2c_smbus_write_byte_data (fd, 0x40, value);
     
-    if (ret < 0) return ( EXIT_FAILURE );    
-    return ( EXIT_SUCCESS );
+    return ( ret );
 }
 /*! --------------------------------------------------------------------
  *
  */
 int main(int argc, char *argv[])
 {	      
-    unsigned short res;
+    int res;
     char buf[256];
     char c;
     int taste = 0;
-    uint8_t foo = 127;
+    uint8_t dac_value = 0x00;
     
     printf ("Exit with ESC\nNext measurement with any key\n");
     
@@ -96,9 +101,10 @@ int main(int argc, char *argv[])
         
         set_ADC_channel ( device, ADC1 );     /* select ADC channel 1 */
         res = i2c_smbus_read_byte (device);   /* read ADC1 */
-        printf ("ADC1=%3i\n", res);
+        printf ("ADC1=%3i  ", res);
         
-        set_DAC_value (device, (foo += 0x10));    /* set new DAC value */
+        res = set_DAC_value (device, (dac_value += 0x10));    /* set new DAC value */
+        printf ("DAC=%i\n", (res >= 0) ? dac_value : res); 
         
         usleep (10000);                       /* wait 10 ms */
         

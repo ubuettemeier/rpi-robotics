@@ -6,8 +6,9 @@ The corresponding pins are SDA.1=Pin 3, SCL.1=Pin 5.
 The PCF8591 is an 8-bit A/D and D/A converter. It has 4 ADC's and 1 DAC.
 The IC is addressed via the I2C bus. The base address is 0x48.
 
-An AD conversion with the PCF9591 is started automatically after a read request.
-This means that the read value is obsolete. This must be taken into account for time-critical applications.
+An AD conversion is automatically started with the PCF9591 after a read request.
+This means that an obsolete ADC value is read at a subsequent read request.
+This must be taken into account for time-critical applications.
 
 script's
 - source/edit.sh => opens the source files with geany
@@ -23,7 +24,8 @@ Der PCF8591 ist ein 8-Bit A/D- und D/A Wandler. Er verfügt über 4 ADC's und 1 
 Der Baustein wird über den I2C Bus angesprochen. Die Basisadresse ist 0x48.
 
 Eine AD-Wandlung wird beim PCF9591 automatisch nach einer Leseanforderung gestartet.
-D.h. der gelesene Wert ist veraltet. Dies ist bei Zeitkritischen Anwendungen zu berücksichtigen.
+D.h., bei einer folgenden Leseanforderung wird ein veralteter ADC-Wert gelesen.
+Dies ist bei Zeitkritischen Anwendungen zu berücksichtigen.
 
 script's
 - source/edit.sh => öffnet die Source Files mit geany
