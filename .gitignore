@@ -39,6 +39,7 @@ test_hc_sr04
 test_laser_sensor
 test_12c
 test_i2c_pcf8591
+test_i2c_24c64
 
 # Debug files
 *.dSYM/
