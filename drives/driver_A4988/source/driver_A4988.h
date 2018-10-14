@@ -23,7 +23,6 @@ struct _thread_state_ {          /* thread state */
     unsigned run: 1;
     unsigned mc_closed: 1;
     unsigned kill: 1;
-    unsigned mc_run: 1;    
 } extern thread_state;
 
 struct _mot_pin_ {             /* motor gpio-pins */
@@ -72,11 +71,11 @@ extern int mot_setparam (struct _mot_ctl_ *mc,
                           uint64_t steps);
 extern int mot_start (struct _mot_ctl_ *mc);
 
-extern int mot_set_enable_pin (struct _mot_ctl_ *mc, uint8_t enable);   /* set the enable Pin */
+extern int mot_set_enable (struct _mot_ctl_ *mc, uint8_t enable);       /* set chip enable/disenable */
 extern int mot_enable (struct _mot_ctl_ *mc);
 extern int mot_disenable (struct _mot_ctl_ *mc);
 
-extern int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction);       /* set the dir Pin */
+extern int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction);       /* set the direction */
 
 extern int mot_set_steptime (struct _mot_ctl_ *mc, int steptime);       /* set speed in [time per step] */
 extern int mot_set_rpm (struct _mot_ctl_ *mc, double rpm);              /* set speed in rpm */

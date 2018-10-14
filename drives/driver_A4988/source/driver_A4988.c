@@ -106,7 +106,7 @@ static int mot_run (struct _mot_ctl_ *mc)
             }
             break;
         case MOT_JOBREADY:
-            printf ("max_latency = %i\n", mc->max_latency);
+            printf ("-- max_latency = %i us\n", mc->max_latency);
             mc->mode = MOT_IDLE;
             break;
     }    
@@ -134,19 +134,21 @@ void *run_A4988 (void *data)
     printSchedulingPolicy ();
 #endif
     
+    uint8_t mc_was_aktiv;
+    
     while (!thread_state.kill) {
-        thread_state.mc_run = 0;
+        mc_was_aktiv = 0;
         if (!thread_state.mc_closed) {            
             mc = first_mc;
             while (mc) {
                 if (mc->mode != MOT_IDLE) {
                     mot_run (mc);                
-                    thread_state.mc_run = 1;
+                    mc_was_aktiv = 1;
                 }
                 mc = mc->next;
             }
         }
-        if (!thread_state.mc_run) usleep (1000);    
+        if (!mc_was_aktiv) usleep (1000);    
     }
     printf ("-- <run_A4988> is stoped\n");    
     thread_state.run = 0;
@@ -193,6 +195,8 @@ int init_mot_ctl()
  */ 
 void mot_initpins (struct _mot_ctl_ *mc)
 {
+    if (!mc) return;
+    
     pinMode (mc->mp.enable_pin, OUTPUT);
     pinMode (mc->mp.dir_pin, OUTPUT);
     pinMode (mc->mp.step_pin, OUTPUT);
@@ -240,11 +244,14 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     return (mc);
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief  The motor enable pin is deactivated and 
+ *          the parameters are removed from the list.
  */ 
 int kill_mot (struct _mot_ctl_ *mc)
 {
     if (mc == NULL) return (EXIT_FAILURE);
+    
+    thread_state.mc_closed = 1;
     
     mot_set_dir (mc, MOT_CW);
     mot_disenable (mc);    
@@ -255,6 +262,8 @@ int kill_mot (struct _mot_ctl_ *mc)
     if (mc == last_mc) last_mc = mc->prev;
     
     free (mc);
+    
+    thread_state.mc_closed = 0;
     
     return (EXIT_SUCCESS);
 }
@@ -313,9 +322,10 @@ int mot_start (struct _mot_ctl_ *mc)
     return (EXIT_SUCCESS);
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief  set chip enable/disenable
+ *          chip enable-pin is low aktiv
  */ 
-int mot_set_enable_pin (struct _mot_ctl_ *mc, uint8_t enable)
+int mot_set_enable (struct _mot_ctl_ *mc, uint8_t enable)
 {
     if (mc) digitalWrite (mc->mp.enable_pin, (mc->enable = enable));
     else return (EXIT_FAILURE);
@@ -327,15 +337,15 @@ int mot_set_enable_pin (struct _mot_ctl_ *mc, uint8_t enable)
  */ 
 int mot_enable (struct _mot_ctl_ *mc)
 {
-    return (mot_set_enable_pin (mc, 0));
+    return (mot_set_enable (mc, 0));        /* chip is low aktiv */
 }
 
 int mot_disenable (struct _mot_ctl_ *mc)
 {
-    return (mot_set_enable_pin (mc, 1));
+    return (mot_set_enable (mc, 1));        /* chip is low aktiv */
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief  set the direction
  */ 
 int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
 {

@@ -2,7 +2,7 @@
 CC = gcc
 
 CFLAGS = -Wall -c -O0 -DNDEBUG
-LDFLAGS = -lwiringPi -lpthread
+LDFLAGS = -lwiringPi -lpthread -lm -lrt
 
 FILENAME = test_driver_A4988
 

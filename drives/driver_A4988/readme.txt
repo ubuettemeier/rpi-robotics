@@ -27,7 +27,7 @@ https://www.pollin.de/p/schrittmotor-treiber-daycom-st-a4988-712678
 Der A4988 Schrittmotortreiber ist für Voll-, Halb-, Viertel, Achtel und
 Sechzehntel Schritt ausgelegt. In diesem Beispiel wird er im Halb Schritt Modus betrieben.
 
-Das Programm nutzt die Pin's ENABLE, DIR, STEP.
+Das Programm nutzt die Pin's ENABLE, DIR und STEP.
 
 Um keine störenden Latenzen zu bekommen, wird der Arbeitsthread auf Priorität 95 gesetzt.
 Für den Realtime Betrieb müsste die Priorität auf 99 gesetzt werden. 
