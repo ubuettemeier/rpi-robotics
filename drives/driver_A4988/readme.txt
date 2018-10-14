@@ -1,6 +1,6 @@
 The software is developed for the Raspberry Pi 3 B.
 A DAYCOM ST-A4988 is used as motor driver.
-The module is distributed by the Pollin:
+The module is distributed by Pollin Electronic:
 
 https://www.pollin.de/p/schrittmotor-treiber-daycom-st-a4988-712678
 
@@ -20,7 +20,7 @@ script's
 // ---------------------------------------------------------------------
 Die Software ist auf den Raspberry Pi 3 B entwickelt.
 Als Motortreiber wird ein DAYCOM ST-A4988 verwendet.
-Vertieben wird das Modul von der Pollin:
+Vertrieben wird das Modul von Pollin Electronic:
 
 https://www.pollin.de/p/schrittmotor-treiber-daycom-st-a4988-712678
 

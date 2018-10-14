@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <sched.h>
+#include <math.h>
  
 #include "driver_A4988.h"
 
@@ -41,31 +42,48 @@ static int difference_micro (struct timeval *start, struct timeval *stop)
 /*! --------------------------------------------------------------------
  * 
  */
-void printSchedulingPolicy(void)
+static void printSchedulingPolicy(void)
 {
     struct sched_param sp;
     int which;
-    
-	which = sched_getscheduler(0);    
+
+    which = sched_getscheduler(0);    
     sched_getparam (0, &sp);
     printf ("-- priority = %i\n", sp.sched_priority);
     
-	switch (which) {
-	case SCHED_OTHER: 
-			printf("-- default scheduling is being used\n");		
-		  	break;
-	case SCHED_FIFO:
-			printf("-- fifo scheduling is being used\n");		
-		  	break;
-	case SCHED_RR:		
-			printf("-- round robin scheduling is being used\n");		
-		  	break;
+    switch (which) {
+        case SCHED_OTHER: 
+            printf("-- default scheduling is being used\n");		
+            break;
+        case SCHED_FIFO:
+            printf("-- fifo scheduling is being used\n");		
+            break;
+        case SCHED_RR:		
+            printf("-- round robin scheduling is being used\n");		
+            break;
 	}		
+}
+/*! --------------------------------------------------------------------
+ * @brief  Execute step
+ */ 
+static int mot_step (struct _mot_ctl_ *mc)
+{
+    if (mc) {
+        digitalWrite (mc->mp.step_pin, 0);
+        digitalWrite (mc->mp.step_pin, 1);
+        asm ("nop");
+        asm ("nop");
+        asm ("nop");
+        asm ("nop");
+        digitalWrite (mc->mp.step_pin, 0);
+    } else return (EXIT_FAILURE);
+    
+    return (EXIT_SUCCESS);
 }
 /*! --------------------------------------------------------------------
  * 
  */
-int mot_run (struct _mot_ctl_ *mc)
+static int mot_run (struct _mot_ctl_ *mc)
 {
     int timediff;
     int delta;
@@ -180,11 +198,12 @@ void mot_initpins (struct _mot_ctl_ *mc)
     pinMode (mc->mp.step_pin, OUTPUT);
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief  create dynamic memory for motor parameter
  */ 
 struct _mot_ctl_ *new_mot (uint8_t pin_enable,
                              uint8_t pin_dir,
-                             uint8_t pin_step)
+                             uint8_t pin_step,
+                             uint32_t steps_per_turn)
 {
     if (!is_init) 
         return (NULL);
@@ -192,6 +211,7 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     thread_state.mc_closed = 1;
     
     struct _mot_ctl_ *mc = (struct _mot_ctl_ *) malloc (sizeof(struct _mot_ctl_));
+    mc->mode = MOT_IDLE;
     
     mc->mp.enable_pin = pin_enable;
     mc->mp.dir_pin = pin_dir;
@@ -201,8 +221,8 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mot_set_dir (mc, MOT_CW);    
     digitalWrite (mc->mp.step_pin, 0);
     
-    mc->mode = MOT_IDLE;
-    
+    mc->steps_per_turn = steps_per_turn;
+        
     mc->num_steps = 0;
     mc->num_rest = 0;
     
@@ -325,19 +345,32 @@ int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
     return (EXIT_SUCCESS);
 }
 /*! --------------------------------------------------------------------
- * @brief  Execute step
+ * @brief   set speed in [time per step]
  */ 
-int mot_step (struct _mot_ctl_ *mc)
+int mot_set_steptime (struct _mot_ctl_ *mc, int steptime)
 {
-    if (mc) {
-        digitalWrite (mc->mp.step_pin, 0);
-        digitalWrite (mc->mp.step_pin, 1);
-        asm ("nop");
-        asm ("nop");
-        asm ("nop");
-        asm ("nop");
-        digitalWrite (mc->mp.step_pin, 0);
-    } else return (EXIT_FAILURE);
+   if (!mc) return (EXIT_FAILURE);
+   mc->steptime = steptime;
+   printf ("-- new steptime = %i us\n", mc->steptime);
+   
+   return (EXIT_SUCCESS);
+}
+/*! --------------------------------------------------------------------
+ * @brief  set speed in rpm
+ */ 
+int mot_set_rpm (struct _mot_ctl_ *mc, double rpm)
+{
+    if (!mc) return (EXIT_FAILURE);
+    if ((rpm == 0.0) || (mc->steps_per_turn == 0)) return (EXIT_FAILURE);
+        
+    int ret = mot_set_steptime (mc, (int)(1000000.0 * 60.0 / (double)mc->steps_per_turn / rpm));
     
-    return (EXIT_SUCCESS);
+    return ( ret );
+}
+/*! --------------------------------------------------------------------
+ * @brief  set speed in s^-1
+ */
+extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz)
+{
+    return (mot_set_rpm(mc, Hz * 60.0));
 }

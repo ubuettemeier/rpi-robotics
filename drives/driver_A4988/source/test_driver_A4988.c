@@ -21,6 +21,8 @@
 #define STEP_PIN_M2   28     /* GPIO.28  PIN 38 */
 #define DIR_PIN_M2    27     /* GPIO.27  PIN 36 */
 
+#define STEPS_PER_TURN 400
+
 struct _mot_ctl_ *m1 = NULL, *m2 = NULL;
 /*! --------------------------------------------------------------------
  * 
@@ -30,8 +32,9 @@ static void help()
     printf ("\n");
     printf ("h = this message\n");
     printf ("ESC = Exit\n");  
-    printf ("1 = start m1 CW\n");  
-    printf ("2 = start m1 CCW\n");  
+    printf ("1 = start m1 CW 400 steps\n");  
+    printf ("2 = start m1 CCW 400 steps\n"); 
+    printf ("8 = new speed\n"); 
     printf ("9 = Motor disenable\n");    
 }
 /*! --------------------------------------------------------------------
@@ -42,12 +45,14 @@ int main(int argc, char *argv[])
     char c;
     int taste = 0; 
     uint8_t ende = 0;   
-    uint8_t para = 0;
+    int sn = 0;
+    double speed_rpm[3] = {150.0, 53.5, 200.0};
     
     init_mot_ctl ();
     sleep (1);
-    m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1);
-    m2 = new_mot (ENABLE_PIN_M2, DIR_PIN_M2, STEP_PIN_M2);
+    m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
+    m2 = new_mot (ENABLE_PIN_M2, DIR_PIN_M2, STEP_PIN_M2, STEPS_PER_TURN);
+    mot_set_rpm (m1, 100.0);
 
     help();
     init_check_keypressed();                           /* init key-touch control */
@@ -65,11 +70,14 @@ int main(int argc, char *argv[])
                     help();
                     break;
                 case '1':
-                case '2':
-                    para = (c == '1') ? MOT_CW : MOT_CCW;
-                    mot_setparam (m1, para, 400);
+                case '2':                    
+                    mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400);
                     mot_start (m1);
-                    break;                
+                    break;   
+                case '8':
+                    sn = (sn < 2) ? sn+1 : 0;
+                    mot_set_rpm (m1, speed_rpm[sn]);                                        
+                    break;
                 case '9':
                     mot_disenable (m1);
                     break;

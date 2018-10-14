@@ -36,6 +36,8 @@ struct _mot_ctl_ {             /* motor control */
     uint8_t dir;
     uint8_t enable;
     uint8_t mode;     
+    uint32_t steps_per_turn;
+    
     int max_latency;
     uint64_t num_steps;         /* if num_step == 0 the motor runs endless */
     uint64_t num_rest;
@@ -55,9 +57,11 @@ extern struct _mot_ctl_ *first_mc, *last_mc;
  */
 extern int init_mot_ctl(void);                            /* Initializes the driver thread */
 
-extern struct _mot_ctl_ *new_mot (uint8_t pin_enable,
+extern struct _mot_ctl_ *new_mot (uint8_t pin_enable,   /* create dynamic memory for motor parameter */
                                      uint8_t pin_dir,
-                                     uint8_t pin_step);
+                                     uint8_t pin_step,
+                                     uint32_t steps_per_turn);
+                                     
 extern int kill_mot (struct _mot_ctl_ *mc);
 extern int kill_all_mot (void);
 extern int count_mot (void);
@@ -68,10 +72,12 @@ extern int mot_setparam (struct _mot_ctl_ *mc,
                           uint64_t steps);
 extern int mot_start (struct _mot_ctl_ *mc);
 
-extern int mot_set_enable_pin (struct _mot_ctl_ *mc, uint8_t enable);  /* set the enable Pin */
+extern int mot_set_enable_pin (struct _mot_ctl_ *mc, uint8_t enable);   /* set the enable Pin */
 extern int mot_enable (struct _mot_ctl_ *mc);
 extern int mot_disenable (struct _mot_ctl_ *mc);
 
-extern int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction);      /* set the dir Pin */
+extern int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction);       /* set the dir Pin */
 
-extern int mot_step (struct _mot_ctl_ *mc);             /* Execute one step signal */
+extern int mot_set_steptime (struct _mot_ctl_ *mc, int steptime);       /* set speed in [time per step] */
+extern int mot_set_rpm (struct _mot_ctl_ *mc, double rpm);              /* set speed in rpm */
+extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz);                /* set speed in s^-1 */
