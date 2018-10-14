@@ -2,7 +2,7 @@
 CC = gcc
 
 CFLAGS = -Wall -c -O0 -DNDEBUG
-LDFLAGS = -lwiringPi
+LDFLAGS = -lwiringPi -lpthread
 
 FILENAME = test_driver_A4988
 
@@ -11,12 +11,14 @@ FILENAME = test_driver_A4988
 # ----------------------------------------------------------------------
 SRC = \
 $(FILENAME).c \
+driver_A4988.c \
 ../../../sensor/ultrasonic-HC-SR04/source/keypressed.c
 
 # ----------------------------------------------------------------------
 # Header files
 # ----------------------------------------------------------------------
 HEADER = \
+driver_A4988.h \
 ../../../sensor/ultrasonic-HC-SR04/source/keypressed.h
 
 # ---------------------------------------------------------------------- 
@@ -24,7 +26,8 @@ HEADER = \
 # ----------------------------------------------------------------------
 OBJ = \
 ../build/$(FILENAME).o \
-../build/keypressed.o
+../build/driver_A4988.o \
+../build/keypressed.o 
 
 # ---------------------------------------------------------------------- 
 # binary code

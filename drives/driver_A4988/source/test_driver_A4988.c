@@ -8,40 +8,20 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <wiringPi.h>
-#include <sys/time.h>
 #include <pthread.h>
 
+#include "driver_A4988.h"
 #include "../../../sensor/ultrasonic-HC-SR04/source/keypressed.h"
 
-#define STEP_TIME  750
+#define ENABLE_PIN_M1 25     /* GPIO.25  PIN 37 */
+#define STEP_PIN_M1   24     /* GPIO.24  PIN 35 */
+#define DIR_PIN_M1    23     /* GPIO.23  PIN 33 */
 
-#define ENABLE_PIN 25     /* GPIO.25 */
-#define STEP_PIN   24     /* GPIO.24 */
-#define DIR_PIN    23     /* GPIO.23 */
+#define ENABLE_PIN_M2 29     /* GPIO.29  PIN 40 */
+#define STEP_PIN_M2   28     /* GPIO.28  PIN 38 */
+#define DIR_PIN_M2    27     /* GPIO.27  PIN 36 */
 
-#define one_step   digitalWrite (STEP_PIN, 0); \
-                   digitalWrite (STEP_PIN, 1); \
-                   asm ("nop"); \
-                   asm ("nop"); \
-                   asm ("nop"); \
-                   asm ("nop"); \
-                   digitalWrite (STEP_PIN, 0)
-
-uint8_t enable = !0;      /* Signal is low active */
-uint8_t dir = 0;
-
-/*!	--------------------------------------------------------------------
- * @brief   calculates time difference in us
- * @return  stop - start
- */
-static int difference_micro (struct timeval *start, struct timeval *stop)
-{
-  return ((signed long long) stop->tv_sec * 1000000ll +
-          (signed long long) stop->tv_usec) -	       
-          ((signed long long) start->tv_sec * 1000000ll +
-           (signed long long) start->tv_usec);
-}
+struct _mot_ctl_ *m1 = NULL, *m2 = NULL;
 /*! --------------------------------------------------------------------
  * 
  */
@@ -49,13 +29,10 @@ static void help()
 {
     printf ("\n");
     printf ("h = this message\n");
-    printf ("ESC = Exit\n");
-    printf ("1 = toggle enable\n");
-    printf ("2 = toggle dir\n");
-    printf ("3 = one step\n");
-    printf ("4 = 400 steps\n");
-    printf ("r = run\n");
-    printf ("s = stop run\n");
+    printf ("ESC = Exit\n");  
+    printf ("1 = start m1 CW\n");  
+    printf ("2 = start m1 CCW\n");  
+    printf ("9 = Motor disenable\n");    
 }
 /*! --------------------------------------------------------------------
  * 
@@ -63,91 +40,43 @@ static void help()
 int main(int argc, char *argv[])
 {
     char c;
-    int taste = 0;
-    struct timeval start, stop;
-    uint8_t run = 0;
-    int timediff;
-    int max_delta = 0;
-    int max_latency = 0;
-    int n = 0;
-    int state = 0;
-  
-    if( wiringPiSetup() < 0) {
-        printf ("wiringPiSetup failed !\n");
-        return EXIT_FAILURE;
-    } 
-
-    pinMode (ENABLE_PIN, OUTPUT);
-    pinMode (STEP_PIN, OUTPUT);
-    pinMode (DIR_PIN, OUTPUT);
+    int taste = 0; 
+    uint8_t ende = 0;   
+    uint8_t para = 0;
     
-    digitalWrite (ENABLE_PIN, enable);
-    digitalWrite (DIR_PIN, dir);
-    digitalWrite (STEP_PIN, 0);
+    init_mot_ctl ();
+    sleep (1);
+    m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1);
+    m2 = new_mot (ENABLE_PIN_M2, DIR_PIN_M2, STEP_PIN_M2);
 
     help();
     init_check_keypressed();                           /* init key-touch control */
-    
-    while (1) {        
-        if ((taste = check_keypressed(&c)) > 0) {          /* look for keypressed */        
-            if (c == 27) break;                           /* quit by ESC */
-            if (c == 'h') help();
-            if (!run) {
-                if (c == '1') {                                /* toggle enable */
-                    enable = !enable;
-                    digitalWrite (ENABLE_PIN, enable);
-                }
-                if (c == '2') {                                /* toggle dir */
-                    dir = !dir;
-                    digitalWrite (DIR_PIN, dir);
-                }
-                if (c == '3') {
-                    one_step;            
-                }
-                if (c == '4') {
-                    int i;
-                    for (i=0; i<400; i++) {                   /* 400 steps = 1 revolution */
-                        one_step;
-                        usleep (1000);                         /* n = 2,5s⁻1 */
-                    }
-                }
+
+    while (!ende) {        
+        if ((taste = check_keypressed(&c)) > 0) {       /* look for keypressed */        
+            switch ( c ) {
+                case 27:                                /* quit by ESC */                
+                    kill_all_mot ();                    /* make motors disenabled */
+                    thread_state.kill = 1;
+                    while (!thread_state.run); 
+                    ende = 1;
+                    break;
+                case 'h':
+                    help();
+                    break;
+                case '1':
+                case '2':
+                    para = (c == '1') ? MOT_CW : MOT_CCW;
+                    mot_setparam (m1, para, 400);
+                    mot_start (m1);
+                    break;                
+                case '9':
+                    mot_disenable (m1);
+                    break;
             }
-            
-            if (c == 'r') {
-                enable = !1;
-                digitalWrite (ENABLE_PIN, enable);                
-                run = 1;
-                max_delta = 0;
-                gettimeofday (&start, NULL);
-            }
-            if (c == 's') {
-                run = 0;   
-                printf ("max latency = %i us\n", max_latency);
-            }
-        }   
-        if (run) {
-            gettimeofday (&stop, NULL); 
-            if ((timediff = difference_micro (&start, &stop)) >= STEP_TIME) {                
-                gettimeofday (&start, NULL);                
-                one_step;
-                if (timediff > max_delta) {
-                    max_delta = timediff;
-                    max_latency = timediff - STEP_TIME;
-                }
-                if (n > 600) {
-                    n = 0;
-                    if (state == 0) printf ("/\r");
-                    if (state == 1) printf ("-\r");
-                    if (state == 2) printf ("%c\r", '\\');
-                    fflush(stdout);
-                    state = (state < 2) ? state+1 : 0;
-                }
-                n++;
-            }
-        }
-        // usleep (1000);                                /* wait 1ms */
+        }           
+        usleep (1000);                                /* wait 1ms */
     }
-    digitalWrite (ENABLE_PIN, (enable = !0));         /* Signal is low aktiv */
     
     destroy_check_keypressed();                       /* destroy key-touch control */
     return EXIT_SUCCESS;
