@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     int sn = 0;
     double speed_rpm[3] = {150.0, 53.5, 200.0};
     
-    init_mot_ctl ();
+    init_mot_ctl ();    
     sleep (1);
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
     m2 = new_mot (ENABLE_PIN_M2, DIR_PIN_M2, STEP_PIN_M2, STEPS_PER_TURN);

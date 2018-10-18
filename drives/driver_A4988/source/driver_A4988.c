@@ -164,7 +164,7 @@ int init_mot_ctl()
     if( wiringPiSetup() < 0) {
         printf ("wiringPiSetup failed !\n");
         return EXIT_FAILURE;
-    } 
+    } else printf ("-- wiringPi initialisiert\n");
     
     if (!thread_A4988) {         /* glob thread handle */
         thread_state.run = 0;
@@ -220,6 +220,8 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mc->mp.enable_pin = pin_enable;
     mc->mp.dir_pin = pin_dir;
     mc->mp.step_pin = pin_step;
+    
+    mot_initpins (mc);
         
     mot_disenable (mc);
     mot_set_dir (mc, MOT_CW);    
