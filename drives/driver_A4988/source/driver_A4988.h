@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <sys/time.h>
+// #include <linux/types.h>
 
 enum {
     MOT_CW = 0,
@@ -31,19 +32,27 @@ struct _mot_pin_ {             /* motor gpio-pins */
     uint8_t enable_pin;
 };
 
+struct _mot_flags_ {
+    unsigned dir : 1;           /* Direction of rotation. CW=0, CCW=1 */
+    unsigned enable : 1;        /* chip enable */
+    unsigned endless : 1;       /* Motor runs forever, void mot_stop() stops the run. */
+};
+
 struct _mot_ctl_ {             /* motor control */
-    uint8_t dir;
-    uint8_t enable;
-    uint8_t mode;     
-    uint32_t steps_per_turn;
+    struct _mot_flags_ flag;   
     
-    int max_latency;
+    uint8_t mode;               /* used in mot_run function. */
+    uint32_t steps_per_turn;    /* step per revolution */
+    
+    int64_t max_latency;        
     uint64_t num_steps;         /* if num_step == 0 the motor runs endless */
     uint64_t num_rest;
+    uint64_t current_stepcount;
+    int64_t runtime; 
     
     int steptime;                /* time in us */
     
-    struct timeval start, stop;
+    struct timeval start, stop;    
     struct _mot_pin_ mp;        /* motor gpio-pins */
     
     struct _mot_ctl_ *next, *prev;
@@ -70,8 +79,9 @@ extern int mot_setparam (struct _mot_ctl_ *mc,
                           uint8_t dir,
                           uint64_t steps);
 extern int mot_start (struct _mot_ctl_ *mc);
+extern int mot_stop (struct _mot_ctl_ *mc);
 
-extern int mot_set_enable (struct _mot_ctl_ *mc, uint8_t enable);       /* set chip enable/disenable */
+extern int mot_switch_enable (struct _mot_ctl_ *mc, uint8_t enable);    /* set chip enable/disenable */
 extern int mot_enable (struct _mot_ctl_ *mc);
 extern int mot_disenable (struct _mot_ctl_ *mc);
 

@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <math.h>
+// #include <linux/types.h>
  
 #include "driver_A4988.h"
 
@@ -32,12 +33,12 @@ uint8_t is_init = 0;
  * @brief   calculates time difference in us
  * @return  stop - start
  */
-static int difference_micro (struct timeval *start, struct timeval *stop)
+static int64_t difference_micro (struct timeval *start, struct timeval *stop)
 {
-  return ((signed long long) stop->tv_sec * 1000000ll +
-          (signed long long) stop->tv_usec) -	       
-          ((signed long long) start->tv_sec * 1000000ll +
-           (signed long long) start->tv_usec);
+  return ((int64_t) stop->tv_sec * 1000000ll +
+          (int64_t) stop->tv_usec) -	       
+          ((int64_t) start->tv_sec * 1000000ll +
+           (int64_t) start->tv_usec);
 }
 /*! --------------------------------------------------------------------
  * 
@@ -86,27 +87,38 @@ static int mot_step (struct _mot_ctl_ *mc)
 static int mot_run (struct _mot_ctl_ *mc)
 {
     int timediff;
-    int delta;
+    static int delta;
+    struct timeval run_start, run_stop;
     
     switch (mc->mode) {
+        case MOT_IDLE:
+            break;
         case MOT_STARTRUN:
+            mc->current_stepcount = 0;
+            delta = 0;
             gettimeofday (&mc->start, NULL); 
+            run_start = mc->start;
             mc->mode = MOT_RUN;
             break;
         case MOT_RUN:
             gettimeofday (&mc->stop, NULL); 
-            if ((timediff = difference_micro (&mc->start, &mc->stop)) >= mc->steptime) {
-                gettimeofday (&mc->start, NULL);                 
-                mot_step (mc);                 /* Execute step */
+            if ((timediff = difference_micro (&mc->start, &mc->stop)) >= (mc->steptime - delta)) {    /* Execute step */            
+                gettimeofday (&mc->start, NULL);    
+                mot_step (mc);                      /* Execute step */
+                mc->current_stepcount++;            /* Increase step counter */
+                mc->runtime = difference_micro (&run_start, &mc->stop); 
                 
-                if ((delta = timediff - mc->steptime) > mc->max_latency)
-                    mc->max_latency = delta;                
-                if (!(--mc->num_rest)) 
-                    mc->mode = MOT_JOBREADY;
+                if ((delta = timediff - mc->steptime) > mc->max_latency)    /* check max latency */
+                    mc->max_latency = delta;   
+                    
+                if (!mc->flag.endless) {                                    /* check step counter */
+                    if (!(--mc->num_rest)) mc->mode = MOT_JOBREADY;
+                }
             }
             break;
         case MOT_JOBREADY:
-            printf ("-- max_latency = %i us\n", mc->max_latency);
+            gettimeofday (&run_stop, NULL);
+            printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us\n", mc->max_latency, mc->current_stepcount, mc->runtime);
             mc->mode = MOT_IDLE;
             break;
     }    
@@ -231,6 +243,7 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
         
     mc->num_steps = 0;
     mc->num_rest = 0;
+    mc->current_stepcount = 0;
     
     mc->steptime = 1000;    /* default 1ms */
     
@@ -298,17 +311,20 @@ int count_mot (void)
     return (count);
 }
 /*! --------------------------------------------------------------------
- * 
+ * @param  *mc  motor handle
+ *          dir  0=CW  1=CCW
+ *          steps>0 Number of steps; steps==0 endless steps
  */ 
 int mot_setparam (struct _mot_ctl_ *mc,
                   uint8_t dir,
                   uint64_t steps)
 {
-    if (mc) {
-        mot_set_dir (mc, dir);
-        mc->num_steps = mc->num_rest = steps;
-        mc->max_latency = 0;
-    } else return (EXIT_FAILURE);
+    if (!mc) return (EXIT_FAILURE);
+    
+    mot_set_dir (mc, dir);        
+    mc->num_steps = mc->num_rest = steps;
+    mc->flag.endless = (steps == 0) ? 1 : 0;
+    mc->max_latency = 0;
     return (EXIT_SUCCESS);
 }
 /*! --------------------------------------------------------------------
@@ -316,20 +332,32 @@ int mot_setparam (struct _mot_ctl_ *mc,
  */ 
 int mot_start (struct _mot_ctl_ *mc)
 {
-    if (mc) {
-        mot_enable (mc);
-        mc->mode = MOT_STARTRUN;        
-    } else return (EXIT_FAILURE);
+    if (!mc) return (EXIT_FAILURE);
+
+    mot_enable (mc);
+    mc->mode = MOT_STARTRUN;        
    
+    return (EXIT_SUCCESS);
+}
+/*! --------------------------------------------------------------------
+ * 
+ */ 
+int mot_stop (struct _mot_ctl_ *mc)
+{
+    if (!mc) return (EXIT_FAILURE);
+    
+    if (mc->mode != MOT_IDLE) 
+        mc->mode = MOT_JOBREADY;
+    
     return (EXIT_SUCCESS);
 }
 /*! --------------------------------------------------------------------
  * @brief  set chip enable/disenable
  *          chip enable-pin is low aktiv
  */ 
-int mot_set_enable (struct _mot_ctl_ *mc, uint8_t enable)
+int mot_switch_enable (struct _mot_ctl_ *mc, uint8_t enable)
 {
-    if (mc) digitalWrite (mc->mp.enable_pin, (mc->enable = enable));
+    if (mc) digitalWrite (mc->mp.enable_pin, (mc->flag.enable = enable));
     else return (EXIT_FAILURE);
     
     return (EXIT_SUCCESS);
@@ -339,19 +367,19 @@ int mot_set_enable (struct _mot_ctl_ *mc, uint8_t enable)
  */ 
 int mot_enable (struct _mot_ctl_ *mc)
 {
-    return (mot_set_enable (mc, 0));        /* chip is low aktiv */
+    return (mot_switch_enable (mc, 0));        /* chip is low aktiv */
 }
 
 int mot_disenable (struct _mot_ctl_ *mc)
 {
-    return (mot_set_enable (mc, 1));        /* chip is low aktiv */
+    return (mot_switch_enable (mc, 1));        /* chip is low aktiv */
 }
 /*! --------------------------------------------------------------------
  * @brief  set the direction
  */ 
 int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
 {
-    if (mc) digitalWrite (mc->mp.dir_pin, (mc->dir = direction));
+    if (mc) digitalWrite (mc->mp.dir_pin, (mc->flag.dir = direction));
     else return (EXIT_FAILURE);
     
     return (EXIT_SUCCESS);

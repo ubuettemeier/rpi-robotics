@@ -35,7 +35,9 @@ static void help()
     printf ("1 = start m1 CW 400 steps\n");  
     printf ("2 = start m1 CCW 400 steps\n"); 
     printf ("8 = new speed\n"); 
-    printf ("9 = Motor disenable\n");    
+    printf ("9 = Motor disenable\n\n");  
+    printf ("e = start m1 CW endless steps\n");  
+    printf ("s = Motor STOP\n");  
 }
 /*! --------------------------------------------------------------------
  * 
@@ -76,10 +78,18 @@ int main(int argc, char *argv[])
                     break;   
                 case '8':
                     sn = (sn < 2) ? sn+1 : 0;
-                    mot_set_rpm (m1, speed_rpm[sn]);                                        
+                    mot_set_rpm (m1, speed_rpm[sn]);                                      
                     break;
                 case '9':
                     mot_disenable (m1);
+                    break;
+                case 'e':
+                    mot_setparam (m1, MOT_CW, 0);
+                    mot_set_Hz (m1, 2.5);
+                    mot_start (m1);
+                    break;                   
+                case 's':
+                    mot_stop (m1);
                     break;
             }
         }           
