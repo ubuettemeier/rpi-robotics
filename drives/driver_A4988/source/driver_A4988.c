@@ -15,7 +15,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <math.h>
-// #include <linux/types.h>
  
 #include "driver_A4988.h"
 
@@ -98,7 +97,9 @@ static int mot_run (struct _mot_ctl_ *mc)
             delta = 0;
             gettimeofday (&mc->start, NULL); 
             run_start = mc->start;
-            mc->mode = MOT_RUN;
+            mc->mode = (mc->a_start <= 0.0) ? MOT_RUN : MOT_SPEED_UP;            
+            break;
+        case MOT_SPEED_UP:
             break;
         case MOT_RUN:
             gettimeofday (&mc->stop, NULL); 
@@ -115,6 +116,8 @@ static int mot_run (struct _mot_ctl_ *mc)
                     if (!(--mc->num_rest)) mc->mode = MOT_JOBREADY;
                 }
             }
+            break;
+        case MOT_SPEED_DOWN:
             break;
         case MOT_JOBREADY:
             gettimeofday (&run_stop, NULL);
@@ -239,13 +242,14 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mot_set_dir (mc, MOT_CW);    
     digitalWrite (mc->mp.step_pin, 0);
     
-    mc->steps_per_turn = steps_per_turn;
+    mc->steps_per_turn = steps_per_turn;            
         
     mc->num_steps = 0;
     mc->num_rest = 0;
     mc->current_stepcount = 0;
     
-    mc->steptime = 1000;    /* default 1ms */
+    mc->steptime = 1000;                /* steptime in us. Default 1ms */
+    mc->a_start = mc->a_stop = 0.0;     /* speed-up, speed-down */
     
     mc->next = mc->prev = NULL;
     if (first_mc == NULL) first_mc = last_mc = mc;
@@ -386,14 +390,18 @@ int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
 }
 /*! --------------------------------------------------------------------
  * @brief   set speed in [time per step]
+ * @param   mc = motor handle
+ *          steptime = steptime in us
  */ 
 int mot_set_steptime (struct _mot_ctl_ *mc, int steptime)
 {
-   if (!mc) return (EXIT_FAILURE);
-   mc->steptime = steptime;
-   printf ("-- new steptime = %i us\n", mc->steptime);
+    if (!mc) return (EXIT_FAILURE);
    
-   return (EXIT_SUCCESS);
+    mc->steptime = steptime;
+    mc->omega = calc_omega (mc->steps_per_turn, mc->steptime);    
+    printf ("-- new steptime=%u us  Omega=%2.3f s⁻1\n", mc->steptime, mc->omega);
+   
+    return (EXIT_SUCCESS);
 }
 /*! --------------------------------------------------------------------
  * @brief  set speed in rpm
@@ -411,6 +419,16 @@ int mot_set_rpm (struct _mot_ctl_ *mc, double rpm)
  * @brief  set speed in s^-1
  */
 extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz)
-{
+{    
     return (mot_set_rpm(mc, Hz * 60.0));
+}
+/*! --------------------------------------------------------------------
+ * @param   steptime in us
+ * @return  omega in s⁻1
+ */
+double calc_omega (uint32_t steps_per_turn, uint32_t steptime)
+{
+   if ((steps_per_turn == 0) || (steptime == 0)) return (0.0);
+   
+   return (1000000.0 / (double)(steptime * steps_per_turn));
 }

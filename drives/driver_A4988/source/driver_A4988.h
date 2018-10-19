@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <sys/time.h>
-// #include <linux/types.h>
 
 enum {
     MOT_CW = 0,
@@ -16,11 +15,13 @@ enum {
 enum {
     MOT_IDLE = 0x00,
     MOT_STARTRUN = 0x01,
-    MOT_RUN = 0x02,
-    MOT_JOBREADY = 0x04
+    MOT_SPEED_UP = 0x02,
+    MOT_RUN = 0x04,
+    MOT_SPEED_DOWN = 0x08,
+    MOT_JOBREADY = 0x10
 };
 
-struct _thread_state_ {          /* thread state */
+struct _thread_state_ {         /* thread state */
     unsigned run: 1;
     unsigned mc_closed: 1;
     unsigned kill: 1;
@@ -42,15 +43,17 @@ struct _mot_ctl_ {             /* motor control */
     struct _mot_flags_ flag;   
     
     uint8_t mode;               /* used in mot_run function. */
-    uint32_t steps_per_turn;    /* step per revolution */
+    uint32_t steps_per_turn;    /* steps per revolution */
     
     int64_t max_latency;        
     uint64_t num_steps;         /* if num_step == 0 the motor runs endless */
     uint64_t num_rest;
     uint64_t current_stepcount;
-    int64_t runtime; 
+    int64_t runtime;            /* full running time in us */
     
-    int steptime;                /* time in us */
+    uint32_t steptime;          /* steptime in us */
+    double omega;               /* angle speed{s⁻1] */
+    double a_start, a_stop;     /* spped-up[s⁻2], speed-down[s⁻2] */
     
     struct timeval start, stop;    
     struct _mot_pin_ mp;        /* motor gpio-pins */
@@ -89,4 +92,9 @@ extern int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction);       /* set t
 
 extern int mot_set_steptime (struct _mot_ctl_ *mc, int steptime);       /* set speed in [time per step] */
 extern int mot_set_rpm (struct _mot_ctl_ *mc, double rpm);              /* set speed in rpm */
-extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz);                /* set speed in s^-1 */
+extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz);                /* set speed in s^-1 (Omega) */
+
+/*! --------------------------------------------------------------------
+ * @brief   Help functions
+ */
+extern double calc_omega (uint32_t steps_per_turn, uint32_t steptime);  /* function for calculation of angular speed */
