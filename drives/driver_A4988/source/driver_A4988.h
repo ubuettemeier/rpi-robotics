@@ -15,13 +15,13 @@ enum DIRECTION {
 
 enum MOT_STATE {
     MOT_IDLE = 0x00,
-    MOT_STARTRUN = 0x01,    
+    MOT_START_RUN = 0x01,    
     MOT_SPEED_UP = 0x02,
-    MOT_MAKE_SPEED_UP = 0x03,
+    MOT_RUN_SPEED_UP = 0x03,
     MOT_RUN = 0x04,
     MOT_SPEED_DOWN = 0x08,
-    MOT_MAKE_SPEED_DOWN = 0x10,
-    MOT_JOBREADY = 0x20
+    MOT_RUN_SPEED_DOWN = 0x10,
+    MOT_JOB_READY = 0x20
 };
 
 struct _thread_state_ {         /* thread state */
@@ -59,7 +59,8 @@ struct _mot_ctl_ {             /* motor control */
     uint32_t steptime;          /* steptime in us. Default 2000 us */ 
     uint32_t current_steptime;
     double phi_per_step;   
-    double omega;               /* angle speed{s⁻1] */
+    double omega;               /* angle-speed{s⁻1] */
+    double current_omega;       /* current angle-speed{s⁻1] */
     double a_start, a_stop;     /* spped-up[s⁻2], speed-down[s⁻2] */
     
     struct timeval start, stop, run_start;

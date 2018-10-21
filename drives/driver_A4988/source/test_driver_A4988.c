@@ -25,7 +25,7 @@
 
 #define STEPS_PER_TURN 400
 
-struct _mot_ctl_ *m1 = NULL, *m2 = NULL;
+struct _mot_ctl_ *m1 = NULL;
 /*! --------------------------------------------------------------------
  * 
  */
@@ -56,7 +56,6 @@ int main(int argc, char *argv[])
     init_mot_ctl ();    
     sleep (1);
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
-    m2 = new_mot (ENABLE_PIN_M2, DIR_PIN_M2, STEP_PIN_M2, STEPS_PER_TURN);
 
     help();
     init_check_keypressed();                           /* init key-touch control */

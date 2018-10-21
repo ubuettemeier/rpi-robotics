@@ -12,15 +12,21 @@
  *      #include "driver_A4988.h"
  *      
  *      int main() {
- *          struct _mot_ctl_ *m1 = NULL 
+ *          struct _mot_ctl_ *m1 = NULL;
  * 
  *          init_mot_ctl ();    
  *          sleep (1);
- *          m1 = new_mot (25, 23, 24, 400);
+ *          m1 = new_mot (25, 23, 24, 400);              // GPIO_ENABLE PIN, GPIO_DIR PIN, GPIO_STEP PIN, steps_per_turn
  *          mot_setparam (m1, MOT_CW, 400, 20.0, 40.0);  // 400 steps, speed up=20 s⁻2, speed down=40 s⁻2
  *          mot_start (m1);
+ * 
  *          while (m1->flag.aktive) sleep(1);
+ * 
  *          mot_disenable (m1);
+ *          kill_all_mot ();                    
+ *          thread_state.kill = 1;
+ *          while (!thread_state.run); 
+ * 
  *          return ( 0 );
  *      }
  */
@@ -118,9 +124,9 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
         mc->max_latency = latency;   
         
     if ((!mc->flag.endless) || 
-        (mc->flag.endless && (mc->mode == MOT_MAKE_SPEED_DOWN))) {   /* check step counter */
+        (mc->flag.endless && (mc->mode == MOT_RUN_SPEED_DOWN))) {   /* check step counter */
             
-        if (!(--mc->num_rest)) mc->mode = MOT_JOBREADY;
+        if (!(--mc->num_rest)) mc->mode = MOT_JOB_READY;
     }
     
     return (latency);
@@ -134,42 +140,44 @@ static int mot_run (struct _mot_ctl_ *mc)
     static int64_t latency;    
     
     switch (mc->mode) {        
-        case MOT_STARTRUN:
+        case MOT_START_RUN:
             mc->max_latency = 0;
             mc->current_steptime = mc->steptime;
             mc->num_rest = (mc->num_steps >= 0) ? mc->num_steps : 0;
             mc->current_stepcount = 0;              /* Current number of steps = 0 */
+            mc->current_omega = 0.0;
             latency = 0;                            
             gettimeofday (&mc->start, NULL);        /* get start time */
-            mc->run_start = mc->start;                  
+            mc->run_start = mc->start;              /* memory start time */    
             mc->mode = (mc->a_start <= 0.0) ? MOT_RUN : MOT_SPEED_UP;            
             break;
+            
         case MOT_SPEED_UP:             
-            if (mc->num_steps && (mc->current_stepcount >= mc->num_steps)) mc->mode = MOT_JOBREADY;         /* target number of steps reached */
-            else {
-                
-                double phi0 = mc->phi_per_step * ((double)mc->current_stepcount);   /* current angle from acceleration */
-                double phi1 = phi0 + mc->phi_per_step; 
-                double omega = sqrt(2.0 * mc->a_start * phi1);                
-                if (omega >= mc->omega) {                       /* target speed reached */ 
+            if (mc->num_steps && (mc->current_stepcount >= mc->num_steps)) mc->mode = MOT_JOB_READY;         /* target number of steps reached */
+            else {                
+                double current_phi = mc->phi_per_step * ((double)mc->current_stepcount);   /* current angle from acceleration */                
+                double new_omega = sqrt(2.0 * mc->a_start * (current_phi + mc->phi_per_step));
+                if (new_omega >= mc->omega) {                                               /* target speed reached */ 
                     mc->current_steptime = mc->steptime;
-                    mc->mode = MOT_RUN;                         /* constant speed */
-                } else {                                        /* further speed-up */                    
-                    double t0 = sqrt(phi0 * 2.0 / mc->a_start);
-                    double t1 = sqrt(phi1 * 2.0 / mc->a_start);
-                    mc->current_steptime = (int64_t) ((t1 - t0) * 1000000.0);
-                    mc->mode = MOT_MAKE_SPEED_UP;
+                    mc->current_omega = mc->omega; 
+                    mc->mode = MOT_RUN;                                                     /* constant speed */
+                } else {
+                    double t = 2.0 * mc->phi_per_step / (new_omega + mc->current_omega);    /* new time for step */
+                    mc->current_steptime = (int64_t) (t * 1000000.0);                       /* steptime in us */
+                    mc->current_omega = new_omega;
+                    mc->mode = MOT_RUN_SPEED_UP;
                 }
             }
             break;
+            
         case MOT_RUN:
-        case MOT_MAKE_SPEED_UP:
-        case MOT_MAKE_SPEED_DOWN:
+        case MOT_RUN_SPEED_UP:
+        case MOT_RUN_SPEED_DOWN:
             gettimeofday (&mc->stop, NULL); 
             if ((timediff = difference_micro (&mc->start, &mc->stop)) >= (mc->current_steptime - latency)) {    /* Execute step */
                 latency = execute_step (mc, timediff);                  
                 
-                if (((mc->mode == MOT_RUN) || (mc->mode == MOT_MAKE_SPEED_UP)) && (mc->a_stop > 0.0)) { 
+                if (((mc->mode == MOT_RUN) || (mc->mode == MOT_RUN_SPEED_UP)) && (mc->a_stop > 0.0)) {          /* See if you need to brake. */
                     if (mc->num_steps != 0) {
                         uint64_t rest_steps = calc_steps_for_step_down(mc);
                         if (mc->num_rest <= rest_steps) {
@@ -178,21 +186,24 @@ static int mot_run (struct _mot_ctl_ *mc)
                     }
                 }
                 
-                if (mc->mode == MOT_MAKE_SPEED_UP) mc->mode = MOT_SPEED_UP;
-                if (mc->mode == MOT_MAKE_SPEED_DOWN) mc->mode = MOT_SPEED_DOWN;
+                if (mc->mode == MOT_RUN_SPEED_UP) mc->mode = MOT_SPEED_UP;
+                if (mc->mode == MOT_RUN_SPEED_DOWN) mc->mode = MOT_SPEED_DOWN;
             }
             break;
+            
         case MOT_SPEED_DOWN: 
             if (mc->num_rest) {
                 double phi1 = (double)mc->num_rest * mc->phi_per_step;
                 double phi0 = phi1 - mc->phi_per_step;
                 double t1 = sqrt(phi1 * 2.0 / mc->a_stop);
                 double t0 = sqrt(phi0 * 2.0 / mc->a_stop);                
-                mc->current_steptime = (int64_t) ((t1 - t0) * 1000000.0);
-                mc->mode = MOT_MAKE_SPEED_DOWN;
+                mc->current_steptime = (int64_t) ((t1 - t0) * 1000000.0);       /* steptime in us */
+                mc->current_omega = calc_omega (mc->steps_per_turn, mc->current_steptime);
+                mc->mode = MOT_RUN_SPEED_DOWN;
             }
             break;
-        case MOT_JOBREADY: 
+            
+        case MOT_JOB_READY: 
             mc->mode = MOT_IDLE;
             mc->flag.aktiv = 0;
             printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us\n", mc->max_latency, mc->current_stepcount, mc->runtime);            
@@ -424,7 +435,7 @@ int mot_start (struct _mot_ctl_ *mc)
         return (EXIT_FAILURE);
     }
     mot_enable (mc);
-    mc->mode = MOT_STARTRUN;        
+    mc->mode = MOT_START_RUN;        
     mc->flag.aktiv = 1;
    
     return (EXIT_SUCCESS);
@@ -441,7 +452,7 @@ int mot_stop (struct _mot_ctl_ *mc)
             mc->num_rest = calc_steps_for_step_down (mc);
             mc->mode = MOT_SPEED_DOWN;
         }
-        else mc->mode = MOT_JOBREADY;
+        else mc->mode = MOT_JOB_READY;
     }
     
     return (EXIT_SUCCESS);
