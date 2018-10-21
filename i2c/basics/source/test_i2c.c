@@ -1,6 +1,6 @@
 /*! ---------------------------------------------------------------------
  * @file    test_i2c.c
- * @date    09.30.2018
+ * @date    09-30-2018
  * @name    Ulrich Buettemeier
  * 
  * @brief   Program works with i2c-dev

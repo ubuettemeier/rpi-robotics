@@ -1,6 +1,6 @@
 /*! ---------------------------------------------------------------------
  * @file    test_i2c_pcf8591.c
- * @date    05.10.2018
+ * @date    10-05-2018
  * @name    Ulrich Buettemeier
  * 
  * @brief   Program works with i2c-dev
