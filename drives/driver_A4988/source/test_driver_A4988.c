@@ -1,8 +1,10 @@
 /*! ---------------------------------------------------------------------
  * @file    test_driver_A4988.c
- * @date    10.12.2018
+ * @date    10-12-2018
  * @name    Ulrich Buettemeier
  */
+
+#define G 9.81
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
     int taste = 0; 
     uint8_t ende = 0;   
     int sn = 0;
-    double speed_rpm[3] = {150.0, 53.5, 200.0};
+    double speed_rpm[3] = {150.0, 53.5, 250.0};
     
     init_mot_ctl ();    
     sleep (1);
@@ -72,8 +74,8 @@ int main(int argc, char *argv[])
                     help();
                     break;
                 case '1':
-                case '2':                    
-                    mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400);
+                case '2':                                        
+                    mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400, 3*G, 5*G);
                     mot_start (m1);
                     break;   
                 case '8':
@@ -84,8 +86,8 @@ int main(int argc, char *argv[])
                     mot_disenable (m1);
                     break;
                 case 'e':
-                    mot_setparam (m1, MOT_CW, 0);
-                    mot_set_Hz (m1, 2.5);
+                    mot_setparam (m1, MOT_CW, 0, 3*G, 5*G);
+                    mot_set_rpm (m1, 200.0);
                     mot_start (m1);
                     break;                   
                 case 's':
