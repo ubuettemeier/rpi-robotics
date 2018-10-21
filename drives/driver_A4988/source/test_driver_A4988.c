@@ -40,6 +40,7 @@ static void help()
     printf ("9 = Motor disenable\n\n");  
     printf ("e = start m1 CW endless steps\n");  
     printf ("s = Motor STOP\n");  
+    printf ("r = repeat motor sequence\n");
 }
 /*! --------------------------------------------------------------------
  * 
@@ -56,7 +57,6 @@ int main(int argc, char *argv[])
     sleep (1);
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
     m2 = new_mot (ENABLE_PIN_M2, DIR_PIN_M2, STEP_PIN_M2, STEPS_PER_TURN);
-    mot_set_rpm (m1, 100.0);
 
     help();
     init_check_keypressed();                           /* init key-touch control */
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
                     help();
                     break;
                 case '1':
-                case '2':                                        
+                case '2':                  /* set motor sequence */
                     mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400, 3*G, 5*G);
                     mot_start (m1);
                     break;   
@@ -84,14 +84,17 @@ int main(int argc, char *argv[])
                     break;
                 case '9':
                     mot_disenable (m1);
-                    break;
-                case 'e':
+                    break;                
+                case 'e':                   /* set endless motor sequence (steps = 0) */
                     mot_setparam (m1, MOT_CW, 0, 3*G, 5*G);
                     mot_set_rpm (m1, 200.0);
                     mot_start (m1);
                     break;                   
                 case 's':
                     mot_stop (m1);
+                    break;
+                case 'r':                   /* repeat motor sequence */
+                    mot_start (m1);
                     break;
             }
         }           

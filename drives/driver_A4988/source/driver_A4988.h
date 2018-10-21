@@ -50,13 +50,13 @@ struct _mot_ctl_ {             /* motor control */
     uint32_t steps_per_turn;    /* steps per revolution */
     
     int64_t max_latency;        
-    uint64_t num_steps;         /* if num_step == 0 the motor runs endless */
+    int64_t num_steps;          /* num_step < 0 parameter failed, num_step == 0 the motor runs endless */
     uint64_t num_rest;
     uint64_t current_stepcount; /* Current number of steps */
 
     int64_t runtime;            /* full running time in us */
     
-    uint32_t steptime;          /* steptime in us */ 
+    uint32_t steptime;          /* steptime in us. Default 2000 us */ 
     uint32_t current_steptime;
     double phi_per_step;   
     double omega;               /* angle speed{s⁻1] */

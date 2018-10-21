@@ -107,15 +107,15 @@ static int mot_step (struct _mot_ctl_ *mc)
  */
 static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
 {
-    int64_t delta;
+    int64_t latency;
     
     gettimeofday (&mc->start, NULL);    /* set new time */   
     mot_step (mc);                      /* Execute step */
     mc->current_stepcount++;            /* Increase step counter */
     mc->runtime = difference_micro (&mc->run_start, &mc->stop); 
 
-    if ((delta = timediff - mc->current_steptime) > mc->max_latency)    /* check max latency */
-        mc->max_latency = delta;   
+    if ((latency = timediff - mc->current_steptime) > mc->max_latency)    /* check max latency */
+        mc->max_latency = latency;   
         
     if ((!mc->flag.endless) || 
         (mc->flag.endless && (mc->mode == MOT_MAKE_SPEED_DOWN))) {   /* check step counter */
@@ -123,7 +123,7 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
         if (!(--mc->num_rest)) mc->mode = MOT_JOBREADY;
     }
     
-    return (delta);
+    return (latency);
 }
 /*! --------------------------------------------------------------------
  * @brief  used by run_A4988()
@@ -131,14 +131,15 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
 static int mot_run (struct _mot_ctl_ *mc)
 {
     int64_t timediff;
-    static int64_t delta;    
+    static int64_t latency;    
     
     switch (mc->mode) {        
         case MOT_STARTRUN:
             mc->max_latency = 0;
             mc->current_steptime = mc->steptime;
+            mc->num_rest = (mc->num_steps >= 0) ? mc->num_steps : 0;
             mc->current_stepcount = 0;              /* Current number of steps = 0 */
-            delta = 0;                              /* latency */
+            latency = 0;                            
             gettimeofday (&mc->start, NULL);        /* get start time */
             mc->run_start = mc->start;                  
             mc->mode = (mc->a_start <= 0.0) ? MOT_RUN : MOT_SPEED_UP;            
@@ -165,8 +166,8 @@ static int mot_run (struct _mot_ctl_ *mc)
         case MOT_MAKE_SPEED_UP:
         case MOT_MAKE_SPEED_DOWN:
             gettimeofday (&mc->stop, NULL); 
-            if ((timediff = difference_micro (&mc->start, &mc->stop)) >= (mc->current_steptime - delta)) {    /* Execute step */
-                delta = execute_step (mc, timediff);                  
+            if ((timediff = difference_micro (&mc->start, &mc->stop)) >= (mc->current_steptime - latency)) {    /* Execute step */
+                latency = execute_step (mc, timediff);                  
                 
                 if (((mc->mode == MOT_RUN) || (mc->mode == MOT_MAKE_SPEED_UP)) && (mc->a_stop > 0.0)) { 
                     if (mc->num_steps != 0) {
@@ -319,11 +320,11 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mc->steps_per_turn = steps_per_turn;   
     mc->phi_per_step = 2.0 * M_PI / (double)mc->steps_per_turn;    
         
-    mc->num_steps = 0;
+    mc->num_steps = -1;
     mc->num_rest = 0;
     mc->current_stepcount = 0;
     
-    mc->steptime = 1000;                                        /* steptime in us. Default 1ms */
+    mc->steptime = 2000;                                        /* steptime in us. Default 1ms */
     mc->omega = calc_omega (mc->steps_per_turn, mc->steptime);
     mc->a_start = mc->a_stop = 0.0;                             /* speed-up, speed-down */
     
@@ -418,6 +419,10 @@ int mot_start (struct _mot_ctl_ *mc)
 {
     if (!mc) return (EXIT_FAILURE);
 
+    if (mc->num_steps < 0) {
+        printf ("parameter num_steps failed\n");
+        return (EXIT_FAILURE);
+    }
     mot_enable (mc);
     mc->mode = MOT_STARTRUN;        
     mc->flag.aktiv = 1;
