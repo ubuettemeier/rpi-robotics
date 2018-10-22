@@ -2,30 +2,40 @@
 CC = gcc
 
 CFLAGS = -Wall -c -O0 -DNDEBUG
-FLAGS =
-INC=
 LDFLAGS = -lwiringPi
 
 FILENAME = test_laser_sensor
-OUTPUTFOLDER = ../build
 
-SOURCE = $(FILENAME).c 
+# ----------------------------------------------------------------------
+# Source files
+# ----------------------------------------------------------------------
+SRC = \
+$(FILENAME).c
+
+# ----------------------------------------------------------------------
+# Header files
+# ----------------------------------------------------------------------
 HEADER =
-QUELLE = $(SOURCE) $(HEADER)
 
-OBJ	= $(SOURCE:.c=.o)
-BIN = $(FILENAME)
+# ---------------------------------------------------------------------- 
+# Object files
+# ----------------------------------------------------------------------
+OBJ = \
+../build/$(FILENAME).o
+
+# ---------------------------------------------------------------------- 
+# binary code
+# ----------------------------------------------------------------------
+BIN = ../build/$(FILENAME)
+
 
 $(BIN): $(OBJ)
-	$(CC) -o $(BIN) $(OBJ) $(LDFLAGS)
-	mv *.o $(OUTPUTFOLDER)
-	mv $(FILENAME) $(OUTPUTFOLDER)
+	$(CC) -o $(BIN) $(LDFLAGS) $(OBJ)
 
-$(OBJ): $(QUELLE) $(HEADER)	
-	$(CC) $(CFLAGS) $(FLAGS) $(INC) $(SOURCE)
+$(OBJ) : $(SRC) $(HEADER)
+	$(CC) -c $(CFLAGS) $(SRC)
+	mv *.o ../build
 
 .PHONEY:	clean
 clean:
-	rm -rf $(OBJ)
-	rm -rf $(FILENAME)
-
+	rm -rf $(OBJ) $(BIN)

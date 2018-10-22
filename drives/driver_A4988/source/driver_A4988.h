@@ -46,7 +46,7 @@ struct _mot_flags_ {
 struct _mot_ctl_ {             /* motor control */
     struct _mot_flags_ flag;   
     
-    uint8_t mode;               /* used in mot_run function. */
+    uint8_t mode;               /* used in mot_run function. see: enum MOT_STATE */
     uint32_t steps_per_turn;    /* steps per revolution */
     
     int64_t max_latency;        
@@ -102,12 +102,12 @@ extern int mot_disenable (struct _mot_ctl_ *mc);
 
 extern int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction);       /* set the direction */
 
-extern int mot_set_steptime (struct _mot_ctl_ *mc, int steptime);       /* set speed in [time per step] */
-extern int mot_set_rpm (struct _mot_ctl_ *mc, double rpm);              /* set speed in rpm */
-extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz);                /* set speed in s^-1 (Omega) */
+extern int mot_set_steptime (struct _mot_ctl_ *mc, int steptime);       /* set speed in time per step [us] */
+extern int mot_set_rpm (struct _mot_ctl_ *mc, double rpm);              /* set speed rpm [min⁻1] */
+extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz);                /* set speed f [s⁻1] */
 
 /*! --------------------------------------------------------------------
- * @brief   Help functions
+ * @brief   calculation functions
  */
 extern double calc_omega (uint32_t steps_per_turn, uint32_t steptime);  /* function for calculation of angular speed */
 extern double calc_steps_for_step_down (struct _mot_ctl_ *mc);

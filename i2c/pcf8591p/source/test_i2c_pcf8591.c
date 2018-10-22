@@ -46,12 +46,10 @@ static void abort_by_error (const char *error_text, const char *func_name)
  */
 int set_ADC_channel (int fd, uint8_t channel)
 {
-    int ret; 
-    
-    if (fd < 0) return ( -1 );                       /* check device */
-    ret = i2c_smbus_read_byte_data( fd, channel );    /* Set ADC channel and read out previous ADC value */
-    
-    return ( ret );
+    if (fd < 0) 
+        return ( -1 );                              /* check device */
+        
+    return i2c_smbus_read_byte_data( fd, channel );   /* Set ADC channel and read out previous ADC value */
 }
 /*! --------------------------------------------------------------------
  *  @brief  Function sets new DAC value
@@ -63,12 +61,10 @@ int set_ADC_channel (int fd, uint8_t channel)
  */
 int set_DAC_value (int fd, uint8_t value)
 {
-    int ret;
-    
-    if (fd < 0) return ( -1 );                           /* check device */
-    ret = i2c_smbus_write_byte_data (fd, 0x40, value);
-    
-    return ( ret );
+    if (fd < 0) 
+        return ( -1 );                                  /* check device */
+        
+    return i2c_smbus_write_byte_data (fd, 0x40, value);
 }
 /*! --------------------------------------------------------------------
  *

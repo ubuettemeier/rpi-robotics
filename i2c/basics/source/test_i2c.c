@@ -37,11 +37,14 @@ static void scan_i2c (int device)
     if (device < 0) return;
     
     printf ("\n   ");
-    for (i=0; i<=0xF; i++) printf ("%3X", i);                           /* print the low nibble of the i2c_addr */
+    for (i=0; i<=0xF; i++) 
+        printf ("%3X", i);                           /* print the low nibble of the i2c_addr */
+        
     printf ("\n");
     
     for (i2c_addr=0; i2c_addr<128; i2c_addr++) {
-        if (((i2c_addr+1) % 16) == 1) printf ("%2X:", (i2c_addr));      /* First print the high nibble of the i2c_addr */
+        if (((i2c_addr+1) % 16) == 1) 
+            printf ("%2X:", (i2c_addr));      /* First print the high nibble of the i2c_addr */
         
         if ((i2c_addr > 2) && (i2c_addr < 0x78)) {                      /* scan betwewn 0x02 to 0x78 */
             if (ioctl( device, I2C_SLAVE_FORCE, i2c_addr ) < 0) {
@@ -51,7 +54,9 @@ static void scan_i2c (int device)
                 else printf (" --");
             }
         } else printf ("   ");
-        if (((i2c_addr+1) % 16) == 0) printf ("\n");         /* stdout line feed */
+        
+        if (((i2c_addr+1) % 16) == 0) 
+            printf ("\n");         /* stdout line feed */
     }
     
     printf ("\n");

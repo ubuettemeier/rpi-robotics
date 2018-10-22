@@ -58,31 +58,34 @@ struct _hc_sr04_ *new_hc_sr04 (uint8_t pin_trig, uint8_t pin_echo)
     end_hc_sr04 = sen;
   }  
     
-  return (sen);
+  return sen;
 }
 /*! --------------------------------------------------------------------
  * 
  */
 int delete_hc_sr04 (struct _hc_sr04_ *sensor)
 {
-  if (sensor == NULL) 
-    return EXIT_FAILURE;
+    if (sensor == NULL) 
+        return EXIT_FAILURE;
 
-  if (sensor->next != NULL) sensor->next->prev = sensor->prev;
-  if (sensor->prev != NULL) sensor->prev->next = sensor->next;
-  if (sensor == first_hc_sr04) first_hc_sr04 = sensor->next;  
-  if (sensor == end_hc_sr04) end_hc_sr04 = sensor->prev;
-  free (sensor);
-  
-  return EXIT_SUCCESS;
+    if (sensor->next != NULL) sensor->next->prev = sensor->prev;
+    if (sensor->prev != NULL) sensor->prev->next = sensor->next;
+    if (sensor == first_hc_sr04) first_hc_sr04 = sensor->next;  
+    if (sensor == end_hc_sr04) end_hc_sr04 = sensor->prev;
+    
+    free (sensor);
+
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
  */
 int delete_all_hc_sr04 ()
 {
-  while (first_hc_sr04 != NULL) delete_hc_sr04 (first_hc_sr04);
-  return EXIT_SUCCESS;
+    while (first_hc_sr04 != NULL) 
+        delete_hc_sr04 (first_hc_sr04);
+
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
@@ -96,7 +99,7 @@ int count_hc_sr04 ()
     amount++;
     sensor = sensor->next;
   }
-  return ( amount );
+  return amount;
 }
 /*! --------------------------------------------------------------------
  * @brief   start the measure thread
@@ -151,7 +154,8 @@ int while_echo (struct _hc_sr04_ *sen, uint8_t state)
     if ((timediff = difference_micro (&start, &stop)) >= TIMEOUT) end = 2;
     else if (digitalRead (sen->echo_pin) != state) end = 1;        
   }    
-  return (timediff);
+  
+  return timediff;
 }
 /*! --------------------------------------------------------------------
  * @brief  starts the measurement and calculates the distance
@@ -160,7 +164,8 @@ int get_dist (struct _hc_sr04_ *sen)
 {
   int timediff;
   
-  if (sen == NULL) return ( EXIT_FAILURE );
+  if (sen == NULL) 
+    return EXIT_FAILURE;
   
   if (digitalRead (sen->echo_pin) == 0) {      /* check echo */
     digitalWrite (sen->trig_pin, 0);
@@ -170,7 +175,8 @@ int get_dist (struct _hc_sr04_ *sen)
     digitalWrite (sen->trig_pin, 0);
   
     if (while_echo (sen, 0) < TIMEOUT) {
-      if ((timediff = while_echo (sen, 1)) >= TIMEOUT) timediff = 0;
+      if ((timediff = while_echo (sen, 1)) >= TIMEOUT) 
+        timediff = 0;
       
       pthread_mutex_lock(&hc_sr04_mutex);                  /* enter critical section */
       sen->hc_sr04_run_time = timediff;
@@ -178,7 +184,8 @@ int get_dist (struct _hc_sr04_ *sen)
       pthread_mutex_unlock(&hc_sr04_mutex);                /* leave critical section */
     }
   }
-  return ( EXIT_SUCCESS );
+  
+  return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief  sensor read thread
@@ -198,6 +205,7 @@ void *run_hc_sr04 (void *data)
   }
   hc_sr04_end = 2;
   printf ("-- thread run_hc_sr04 killed\n");
-  return (EXIT_SUCCESS);
+  
+  return EXIT_SUCCESS;
 }
 

@@ -2,7 +2,6 @@
 CC = gcc
 
 CFLAGS = -Wall -c -O0 -DNDEBUG
-# LDFLAGS = -lwiringPi -lpthread -lm -lrt
 LDFLAGS = -lwiringPi -lpthread -lm
 
 FILENAME = test_driver

@@ -46,5 +46,6 @@ int check_keypressed(char *c)
   if ((res = select( fileno( stdin )+1, &set, NULL, NULL, &tv )) > 0) {
     read( fileno( stdin ), c, 1 );
   }
-  return (res);
+  
+  return res;
 }

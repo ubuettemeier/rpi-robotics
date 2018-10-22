@@ -24,5 +24,5 @@ int main() {
     thread_state.kill = 1;
     while (!thread_state.run); 
     
-    return (0);
+    return 0;
 }

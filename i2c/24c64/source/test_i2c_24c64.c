@@ -89,7 +89,7 @@ static int write_page (int fd, uint16_t addr, uint16_t len, uint8_t *value)
     }
     if (timeout >= 20) ret = -3;
     
-    return (ret); 
+    return ret; 
 }
 /*! --------------------------------------------------------------------
  *  @return  If an error occurs, the return value is negative.
@@ -144,7 +144,7 @@ static int read_bytes (int fd, uint16_t addr, uint16_t len, uint8_t *buf)
     if (read (fd, buf, len) != len)   /* read data */
         return -2;
         
-    return (0);
+    return 0;
 }
 /*! --------------------------------------------------------------------
  *
@@ -178,8 +178,12 @@ int main(int argc, char *argv[])
         
     while (1) {        
         while ((taste = check_keypressed(&c)) <= 0);  /* wait for keypressed */
-        if (c == 27) break;                           /* quit by ESC */
-        if (c == 'h') help();
+        if (c == 27) 
+            break;                           /* quit by ESC */
+            
+        if (c == 'h') 
+            help();
+            
         if (c == '1') {            
             time (&t);
             sprintf (buf, "Timestemp of this Test: %s\n", ctime(&t));
@@ -196,5 +200,6 @@ int main(int argc, char *argv[])
     
     close (device);
     destroy_check_keypressed();              /* destroy key-touch control */
-    return (EXIT_SUCCESS);
+    
+    return EXIT_SUCCESS;
 }

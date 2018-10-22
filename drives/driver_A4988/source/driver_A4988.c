@@ -16,7 +16,7 @@
  * 
  *          init_mot_ctl ();    
  *          sleep (1);
- *          m1 = new_mot (25, 23, 24, 400);              // GPIO_ENABLE PIN, GPIO_DIR PIN, GPIO_STEP PIN, steps_per_turn
+ *          m1 = new_mot (25, 23, 24, 400);              // param: GPIO_ENABLE PIN, GPIO_DIR PIN, GPIO_STEP PIN, steps_per_turn
  *          mot_setparam (m1, MOT_CW, 400, 20.0, 40.0);  // 400 steps, speed up=20 s⁻2, speed down=40 s⁻2
  *          mot_start (m1);
  * 
@@ -106,7 +106,7 @@ static int mot_step (struct _mot_ctl_ *mc)
         digitalWrite (mc->mp.step_pin, 0);
     } else return (EXIT_FAILURE);
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief  used by mot_run()
@@ -129,7 +129,7 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
         if (!(--mc->num_rest)) mc->mode = MOT_JOB_READY;
     }
     
-    return (latency);
+    return latency;
 }
 /*! --------------------------------------------------------------------
  * @brief  used by run_A4988()
@@ -186,8 +186,10 @@ static int mot_run (struct _mot_ctl_ *mc)
                     }
                 }
                 
-                if (mc->mode == MOT_RUN_SPEED_UP) mc->mode = MOT_SPEED_UP;
-                if (mc->mode == MOT_RUN_SPEED_DOWN) mc->mode = MOT_SPEED_DOWN;
+                if (mc->mode == MOT_RUN_SPEED_UP) 
+                    mc->mode = MOT_SPEED_UP;
+                if (mc->mode == MOT_RUN_SPEED_DOWN) 
+                    mc->mode = MOT_SPEED_DOWN;
             }
             break;
             
@@ -209,7 +211,7 @@ static int mot_run (struct _mot_ctl_ *mc)
             printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us\n", mc->max_latency, mc->current_stepcount, mc->runtime);            
             break;
     }    
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief  driver thread
@@ -233,25 +235,28 @@ void *run_A4988 (void *data)
     printSchedulingPolicy ();
 #endif
     
-    uint8_t mc_was_aktiv;
+    uint8_t all_mot_idle;
     
     while (!thread_state.kill) {
-        mc_was_aktiv = 0;
+        all_mot_idle = 1;
         if (!thread_state.mc_closed) {            
             mc = first_mc;
             while (mc) {
                 if (mc->mode != MOT_IDLE) {
                     mot_run (mc);                
-                    mc_was_aktiv = 1;
+                    all_mot_idle = 0;
                 }
                 mc = mc->next;
             }
         }
-        if (!mc_was_aktiv) usleep (1000);    
+        
+        if (all_mot_idle) 
+            usleep (1000);    
     }
     printf ("-- <run_A4988> is stoped\n");    
     thread_state.run = 0;
-    return (EXIT_SUCCESS);
+    
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief  Initializes the driver thread
@@ -287,14 +292,15 @@ int init_mot_ctl()
 #endif    
     }
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief  configures motor gpio
  */ 
 void mot_initpins (struct _mot_ctl_ *mc)
 {
-    if (!mc) return;
+    if (!mc) 
+        return;
     
     pinMode (mc->mp.enable_pin, OUTPUT);
     pinMode (mc->mp.dir_pin, OUTPUT);
@@ -309,7 +315,7 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
                              uint32_t steps_per_turn)
 {
     if (!is_init) 
-        return (NULL);
+        return NULL;
     
     thread_state.mc_closed = 1;
     
@@ -340,15 +346,16 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mc->a_start = mc->a_stop = 0.0;                             /* speed-up, speed-down */
     
     mc->next = mc->prev = NULL;
-    if (first_mc == NULL) first_mc = last_mc = mc;
-    else {
+    if (first_mc == NULL) {
+        first_mc = last_mc = mc;
+    } else {
         last_mc->next = mc;
         mc->prev = last_mc;
         last_mc = mc;
     }
     
     thread_state.mc_closed = 0;
-    return (mc);
+    return mc;
 }
 /*! --------------------------------------------------------------------
  * @brief  The motor enable pin is deactivated and 
@@ -356,7 +363,8 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
  */ 
 int kill_mot (struct _mot_ctl_ *mc)
 {
-    if (mc == NULL) return (EXIT_FAILURE);
+    if (mc == NULL) 
+        return EXIT_FAILURE;
     
     thread_state.mc_closed = 1;
     
@@ -372,21 +380,19 @@ int kill_mot (struct _mot_ctl_ *mc)
     
     thread_state.mc_closed = 0;
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
  */ 
 int kill_all_mot ()
-{
-    int ret = EXIT_SUCCESS;
-   
+{   
     while (first_mc) {
         if (kill_mot (first_mc) != EXIT_SUCCESS) 
-            ret = EXIT_FAILURE;
+            return EXIT_FAILURE;
     }
-   
-    return (ret);
+
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
@@ -400,7 +406,8 @@ int count_mot (void)
         count++;
         mc = mc->next;
     }
-    return (count);
+    
+    return count;
 }
 /*! --------------------------------------------------------------------
  * @param  *mc  motor handle
@@ -413,7 +420,8 @@ int mot_setparam (struct _mot_ctl_ *mc,
                   double a_start,           /* alpha Start */
                   double a_stop)            /* alpha Stop */
 {
-    if (!mc) return (EXIT_FAILURE);
+    if (!mc) 
+        return EXIT_FAILURE;
     
     mot_set_dir (mc, dir);        
     mc->num_steps = mc->num_rest = steps;
@@ -421,14 +429,16 @@ int mot_setparam (struct _mot_ctl_ *mc,
     mc->max_latency = 0;
     mc->a_start = a_start;
     mc->a_stop = a_stop;
-    return (EXIT_SUCCESS);
+    
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
  */ 
 int mot_start (struct _mot_ctl_ *mc)
 {
-    if (!mc) return (EXIT_FAILURE);
+    if (!mc) 
+        return EXIT_FAILURE;
 
     if (mc->num_steps < 0) {
         printf ("parameter num_steps failed\n");
@@ -438,14 +448,15 @@ int mot_start (struct _mot_ctl_ *mc)
     mc->mode = MOT_START_RUN;        
     mc->flag.aktiv = 1;
    
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
  */ 
 int mot_stop (struct _mot_ctl_ *mc)
 {
-    if (!mc) return (EXIT_FAILURE);
+    if (!mc) 
+        return EXIT_FAILURE;
     
     if (mc->mode != MOT_IDLE) {
         if (mc->a_stop > 0.0) {
@@ -455,7 +466,7 @@ int mot_stop (struct _mot_ctl_ *mc)
         else mc->mode = MOT_JOB_READY;
     }
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief  set chip enable/disenable
@@ -463,32 +474,35 @@ int mot_stop (struct _mot_ctl_ *mc)
  */ 
 int mot_switch_enable (struct _mot_ctl_ *mc, uint8_t enable)
 {
-    if (mc) digitalWrite (mc->mp.enable_pin, (mc->flag.enable = enable));
-    else return (EXIT_FAILURE);
+    if (mc) {
+        digitalWrite (mc->mp.enable_pin, (mc->flag.enable = enable));
+    } else return EXIT_FAILURE;
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * 
  */ 
 int mot_enable (struct _mot_ctl_ *mc)
 {
-    return (mot_switch_enable (mc, 0));        /* chip is low aktiv */
+    return mot_switch_enable (mc, 0);        /* chip is low aktiv */
 }
 
 int mot_disenable (struct _mot_ctl_ *mc)
 {
-    return (mot_switch_enable (mc, 1));        /* chip is low aktiv */
+    return mot_switch_enable (mc, 1);        /* chip is low aktiv */
 }
 /*! --------------------------------------------------------------------
  * @brief  set the direction
  */ 
 int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
 {
-    if (mc) digitalWrite (mc->mp.dir_pin, (mc->flag.dir = direction));
-    else return (EXIT_FAILURE);
-    
-    return (EXIT_SUCCESS);
+    if (!mc) 
+        return EXIT_FAILURE;
+        
+    digitalWrite (mc->mp.dir_pin, (mc->flag.dir = direction));
+        
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
  * @brief   set speed in [time per step]
@@ -497,33 +511,37 @@ int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
  */ 
 int mot_set_steptime (struct _mot_ctl_ *mc, int steptime)
 {
-    if (!mc) return (EXIT_FAILURE);
+    if (!mc) 
+        return (EXIT_FAILURE);
    
     if (steptime != mc->steptime) {
         mc->steptime = steptime;
         mc->omega = calc_omega (mc->steps_per_turn, mc->steptime);    
         printf ("-- new steptime=%u us  Omega=%2.3f s⁻1\n", mc->steptime, mc->omega);
     }
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
- * @brief  set speed in rpm
+ * @brief  set speed rpm [min⁻1]
  */ 
 int mot_set_rpm (struct _mot_ctl_ *mc, double rpm)
 {
-    if (!mc) return (EXIT_FAILURE);
-    if ((rpm == 0.0) || (mc->steps_per_turn == 0)) return (EXIT_FAILURE);
+    if (!mc) 
+        return (EXIT_FAILURE);
+        
+    if ((rpm == 0.0) || (mc->steps_per_turn == 0)) 
+        return (EXIT_FAILURE);
         
     int ret = mot_set_steptime (mc, (int)(1000000.0 * 60.0 / (double)mc->steps_per_turn / rpm));
     
-    return ( ret );
+    return ret;
 }
 /*! --------------------------------------------------------------------
- * @brief  set speed in s^-1
+ * @brief  set speed f [s⁻1]
  */
 extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz)
 {    
-    return (mot_set_rpm(mc, Hz * 60.0));
+    return mot_set_rpm(mc, Hz * 60.0);
 }
 /*! --------------------------------------------------------------------
  * @brief   omega = 2*Pi/T [s⁻1]
@@ -532,9 +550,10 @@ extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz)
  */
 double calc_omega (uint32_t steps_per_turn, uint32_t steptime)
 {
-   if ((steps_per_turn == 0) || (steptime == 0)) return (0.0);
+   if ((steps_per_turn == 0) || (steptime == 0)) 
+    return (0.0);
    
-   return (2.0 * M_PI / ((double)steptime / 1000000.0 * (double)steps_per_turn));
+   return 2.0 * M_PI / ((double)steptime / 1000000.0 * (double)steps_per_turn);
 }
 /*! --------------------------------------------------------------------
  * 
@@ -543,5 +562,6 @@ double calc_steps_for_step_down (struct _mot_ctl_ *mc)
 {
     double omega = calc_omega (mc->steps_per_turn, mc->current_steptime); 
     double phi = omega * omega / 2.0 / mc->a_stop;         
-    return (phi / mc->phi_per_step);
+    
+    return phi / mc->phi_per_step;
 }
