@@ -58,7 +58,7 @@ struct _mot_ctl_ {             /* motor control */
     
     uint32_t steptime;          /* steptime in us. Default 2000 us */ 
     uint32_t current_steptime;
-    double phi_per_step;   
+    double phi_per_step;        /* angle per step [rad] */
     double omega;               /* angle-speed{s⁻1] */
     double current_omega;       /* current angle-speed{s⁻1] */
     double a_start, a_stop;     /* spped-up[s⁻2], speed-down[s⁻2] */
@@ -70,6 +70,22 @@ struct _mot_ctl_ {             /* motor control */
 };
 
 extern struct _mot_ctl_ *first_mc, *last_mc; 
+/*! --------------------------------------------------------------------
+ * Motion Diagram
+ */
+struct _move_point_ {
+    double omega;           /* angle-speed[s⁻1] */
+    double t;               /* [s] t < prev->t */
+    struct _motion_diagram_ *owner;
+    struct _move_point_ *next, *prev;
+};
+
+struct _motion_diagram_ {
+    struct _move_point_ *first_mp, *last_mp;    /* first and last move point of motion diagramm */
+    struct _motion_diagram_ *next, *prev;
+};
+
+extern struct _motion_diagram_ *first_md, *last_md;
 
 /*! --------------------------------------------------------------------
  * 
@@ -89,12 +105,14 @@ extern void mot_initpins (struct _mot_ctl_ *mc);        /* configures motor gpio
 
 extern int mot_setparam (struct _mot_ctl_ *mc,          /* mc = motor handle */
                           uint8_t dir,                  /* dir==0 CW, dir==1 CCW */
-                          uint64_t steps,               /* steps == 0 motor runs endless */
+                          uint64_t num_steps,               /* steps == 0 motor runs endless */
                           double a_start,               /* alpha Start [s⁻2] */
                           double a_stop);               /* alpha stop [s⁻2] */
                           
 extern int mot_start (struct _mot_ctl_ *mc);
 extern int mot_stop (struct _mot_ctl_ *mc);
+
+// extern int mot_start_md (struct _mot_ctl_ *mc, struct _motion_diagram_ *md);
 
 extern int mot_switch_enable (struct _mot_ctl_ *mc, uint8_t enable);    /* set chip enable/disenable */
 extern int mot_enable (struct _mot_ctl_ *mc);
@@ -111,3 +129,15 @@ extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz);                /* set s
  */
 extern double calc_omega (uint32_t steps_per_turn, uint32_t steptime);  /* function for calculation of angular speed */
 extern double calc_steps_for_step_down (struct _mot_ctl_ *mc);
+
+/*! --------------------------------------------------------------------
+ * @brief   motion diagram
+ */
+extern struct _motion_diagram_ *new_md (void);
+extern int kill_md (struct _motion_diagram_ *md);
+extern int kill_all_md (void);
+
+extern struct _move_point_ *add_mp (struct _motion_diagram_ *md, double omega, double t);       /* add an item to the end of the list */
+extern struct _move_point_ *insert_mp (struct _motion_diagram_ *md, double omega, double t);    /* insert item */
+extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */
+extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */

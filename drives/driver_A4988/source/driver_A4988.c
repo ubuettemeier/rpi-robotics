@@ -55,6 +55,7 @@ pthread_t thread_A4988 = NULL;                         /* glob thread handle */
 struct _mot_ctl_ *first_mc = NULL, *last_mc = NULL;   /* motor control */
 uint8_t is_init = 0;
 
+struct _motion_diagram_ *first_md = NULL, *last_md = NULL;  /* motion diagram */
 /*!	--------------------------------------------------------------------
  * @brief   calculates time difference in us
  * @return  stop - start
@@ -416,7 +417,7 @@ int count_mot (void)
  */ 
 int mot_setparam (struct _mot_ctl_ *mc,
                   uint8_t dir,
-                  uint64_t steps,
+                  uint64_t num_steps,
                   double a_start,           /* alpha Start */
                   double a_stop)            /* alpha Stop */
 {
@@ -424,8 +425,8 @@ int mot_setparam (struct _mot_ctl_ *mc,
         return EXIT_FAILURE;
     
     mot_set_dir (mc, dir);        
-    mc->num_steps = mc->num_rest = steps;
-    mc->flag.endless = (steps == 0) ? 1 : 0;
+    mc->num_steps = mc->num_rest = num_steps;
+    mc->flag.endless = (num_steps == 0) ? 1 : 0;
     mc->max_latency = 0;
     mc->a_start = a_start;
     mc->a_stop = a_stop;
@@ -550,10 +551,10 @@ extern int mot_set_Hz (struct _mot_ctl_ *mc, double Hz)
  */
 double calc_omega (uint32_t steps_per_turn, uint32_t steptime)
 {
-   if ((steps_per_turn == 0) || (steptime == 0)) 
-    return (0.0);
+    if ((steps_per_turn == 0) || (steptime == 0)) 
+        return (0.0);
    
-   return 2.0 * M_PI / ((double)steptime / 1000000.0 * (double)steps_per_turn);
+    return 2.0 * M_PI / ((double)steptime / 1000000.0 * (double)steps_per_turn);
 }
 /*! --------------------------------------------------------------------
  * 
@@ -564,4 +565,108 @@ double calc_steps_for_step_down (struct _mot_ctl_ *mc)
     double phi = omega * omega / 2.0 / mc->a_stop;         
     
     return phi / mc->phi_per_step;
+}
+/*! --------------------------------------------------------------------
+ * @brief   motion diagram
+ */
+struct _motion_diagram_ *new_md ()
+{
+    struct _motion_diagram_ *md = (struct _motion_diagram_ *) malloc (sizeof(struct _motion_diagram_));
+    
+    md->first_mp = md->last_mp = NULL;
+    md->next = md->prev = NULL;
+    
+    if (first_md == NULL) {
+        first_md = last_md = md;    
+    } else {
+        last_md->next = md;
+        md->prev = last_md;
+        last_md = md;
+    }
+    
+    return md;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */
+extern int kill_md (struct _motion_diagram_ *md)
+{
+    if (!md) 
+        return EXIT_FAILURE;
+        
+    kill_all_mp (md);
+    
+    if (md->next != NULL) md->next->prev = md->prev;
+    if (md->prev != NULL) md->prev->next = md->next;
+    if (md == first_md) first_md = md->next;
+    if (md == last_md) last_md = md->prev; 
+    
+    free (md);
+    
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */
+extern int kill_all_md (void)
+{
+    while (first_md != NULL) 
+        kill_md (first_md);
+        
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * @brief   add an item to the end of the list
+ */
+struct _move_point_ *add_mp (struct _motion_diagram_ *md, double omega, double t)
+{
+    if (md == NULL)
+        return NULL;
+
+    struct _move_point_ *mp = (struct _move_point_ *) malloc (sizeof(struct _move_point_));
+    
+    mp->omega = omega;
+    mp->t = t;
+    mp->owner = md;
+    
+    mp->next = mp->prev = NULL;
+    if (md->first_mp) {
+        md->first_mp = md->last_mp = NULL;
+    } else {
+        md->last_mp->next = mp;
+        mp->prev = md->last_mp;
+        md->last_mp = mp;        
+    }
+    
+    return mp;
+}
+/*! --------------------------------------------------------------------
+ * @brief   delete move point in motion diagram
+ */
+int kill_mp (struct _move_point_ *mp)
+{
+    if (!mp) 
+        return EXIT_FAILURE;
+        
+    if (mp->next != NULL) mp->next->prev = mp->prev;
+    if (mp->prev != NULL) mp->prev->next = mp->next;
+    if (mp == mp->owner->first_mp) mp->owner->first_mp = mp->next;
+    if (mp == mp->owner->last_mp) mp->owner->last_mp = mp->prev;
+    
+    free (mp);    
+        
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * @brief   delete all move points off motion diagram
+ */
+int kill_all_mp (struct _motion_diagram_ *md)
+{
+    if (!md) 
+        return EXIT_FAILURE;
+        
+    while (md->first_mp != NULL) 
+        kill_mp (md->first_mp);
+        
+    return EXIT_SUCCESS;
 }

@@ -41,6 +41,7 @@ test_12c
 test_i2c_pcf8591
 test_i2c_24c64
 test_driver_A4988
+test_driver
 
 # Debug files
 *.dSYM/
