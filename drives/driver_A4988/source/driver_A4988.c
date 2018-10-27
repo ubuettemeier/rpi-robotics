@@ -569,13 +569,23 @@ double calc_steps_for_step_down (struct _mot_ctl_ *mc)
 /*! --------------------------------------------------------------------
  * @brief   motion diagram
  */
-struct _motion_diagram_ *new_md ()
+struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
 {
     struct _motion_diagram_ *md = (struct _motion_diagram_ *) malloc (sizeof(struct _motion_diagram_));
+    struct _move_point_ *mp = (struct _move_point_ *) malloc (sizeof(struct _move_point_));
     
-    md->first_mp = md->last_mp = NULL;
-    md->next = md->prev = NULL;
-    
+    mp->omega = mp->t = mp->delta_phi = 0.0;        /* the first move point with t=0 */
+    mp->a = 0.0;
+    mp->delta_omega = mp->delta_t = mp->delta_phi = 0.0;
+    mp->steps = 0;
+    mp->owner = md;
+
+    mp->next = mp->prev = NULL;
+    md->first_mp = md->last_mp = mp;
+
+    md->mc = mc;
+    md->phi_all = 0.0;
+    md->next = md->prev = NULL;    
     if (first_md == NULL) {
         first_md = last_md = md;    
     } else {
@@ -616,29 +626,71 @@ extern int kill_all_md (void)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
+ * 
+ */
+int show_md (struct _motion_diagram_ *md)
+{
+    if (!md)
+        return EXIT_FAILURE;
+        
+    struct _move_point_ *mp = md->first_mp;
+    
+    while (mp) {
+        printf ("t=%4.3f  steps=%6llu  omega=%4.3f  a=%4.3f  delta_phi=%4.3f  phi=%4.3f\n", mp->t, mp->steps, mp->omega, mp->a, mp->delta_phi, mp->phi);
+        mp = mp->next;
+    }
+        
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
  * @brief   add an item to the end of the list
  */
-struct _move_point_ *add_mp (struct _motion_diagram_ *md, double omega, double t)
-{
+struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
+{    
     if (md == NULL)
         return NULL;
-
-    struct _move_point_ *mp = (struct _move_point_ *) malloc (sizeof(struct _move_point_));
+        
+    if (t < md->last_mp->t)     /* negative time */
+        return (NULL);
+        
+    struct _move_point_ *mp = (struct _move_point_ *) malloc (sizeof(struct _move_point_));    
     
-    mp->omega = omega;
+    mp->omega = 2.0 * M_PI * Hz;
     mp->t = t;
+        
+    mp->delta_t = mp->t - md->last_mp->t;        
+    mp->delta_omega = mp->omega - md->last_mp->omega;
+    mp->a = (mp->delta_t > 0.0) ? mp->delta_omega / mp->delta_t : 0.0;    
+    mp->delta_phi = (md->last_mp->omega * mp->delta_t) + (mp->a * (mp->delta_t * mp->delta_t) / 2.0);
+        
+    mp->steps = ((md->last_mp->omega * mp->delta_t) + (fabs(mp->a) * (mp->delta_t * mp->delta_t) / 2.0)) / md->mc->phi_per_step;    /* num of steps for this point */
+        
     mp->owner = md;
+    mp->owner->phi_all += mp->delta_phi;
+    mp->phi = mp->owner->phi_all;
     
     mp->next = mp->prev = NULL;
-    if (md->first_mp) {
-        md->first_mp = md->last_mp = NULL;
-    } else {
+    if (md->first_mp == NULL) {        
+        md->first_mp = md->last_mp = mp;
+    } else {        
         md->last_mp->next = mp;
         mp->prev = md->last_mp;
-        md->last_mp = mp;        
+        md->last_mp = mp;       
     }
     
     return mp;
+}
+
+struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t)
+{
+    return add_mp (md, omega / 2.0 / M_PI, t);
+}
+/*! --------------------------------------------------------------------
+ * 
+ */
+struct _move_point_ *insert_mp (struct _motion_diagram_ *md, double Hz, double t)
+{
+    return NULL;
 }
 /*! --------------------------------------------------------------------
  * @brief   delete move point in motion diagram
@@ -649,9 +701,10 @@ int kill_mp (struct _move_point_ *mp)
         return EXIT_FAILURE;
         
     if (mp->next != NULL) mp->next->prev = mp->prev;
-    if (mp->prev != NULL) mp->prev->next = mp->next;
+    if (mp->prev != NULL) mp->prev->next = mp->next;    
     if (mp == mp->owner->first_mp) mp->owner->first_mp = mp->next;
     if (mp == mp->owner->last_mp) mp->owner->last_mp = mp->prev;
+    
     
     free (mp);    
         
@@ -665,8 +718,26 @@ int kill_all_mp (struct _motion_diagram_ *md)
     if (!md) 
         return EXIT_FAILURE;
         
-    while (md->first_mp != NULL) 
+    while (md->first_mp != NULL) {        
         kill_mp (md->first_mp);
+    }
         
     return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */
+extern int counte_mp (struct _motion_diagram_ *md)
+{
+    int n = 0;
+    
+    if (!md)
+        return EXIT_FAILURE;    
+        
+    struct _move_point_ *mp = md->first_mp;
+    while (mp) {
+        n++;
+        mp = mp->next;
+    }
+    return n;
 }

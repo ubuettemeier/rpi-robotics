@@ -95,6 +95,25 @@ int main(int argc, char *argv[])
                 case 'r':                   /* repeat motor sequence */
                     mot_start (m1);
                     break;
+                case 't': {                 /* test moition diagramm */
+                        struct _motion_diagram_ *md2 = new_md(m1);  /* new motion diagram for motor 1 */
+                        add_mp_with_omega (md2, 2, 0);
+                        add_mp_with_omega (md2, -2, 2);
+                        add_mp_with_omega (md2, 0, 3);
+                        
+                        struct _motion_diagram_ *md = new_md(m1);   /* another motion diagram for motor 1 */
+                        add_mp_with_omega (md, 2, 0);
+                        add_mp_with_omega (md, 4, 2);
+                        add_mp_with_omega (md, 4, 6);                        
+                        add_mp_with_omega (md, 2, 7);
+                        add_mp_with_omega (md, 1, 7);                        
+                        
+                        #define SHOW_MD  md
+                        printf ("count=%i  phi_all=%4.3f\n", counte_mp (SHOW_MD), SHOW_MD->phi_all);
+                        show_md (SHOW_MD);
+                        kill_all_md ();
+                    }
+                    break;
             }
         }           
         usleep (1000);                                /* wait 1ms */
