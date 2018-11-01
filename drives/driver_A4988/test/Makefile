@@ -11,20 +11,23 @@ FILENAME = test_driver
 # ----------------------------------------------------------------------
 SRC = \
 $(FILENAME).c \
-../source/driver_A4988.c
+../source/driver_A4988.c \
+../../../tools/rpi_tools/rpi_tools.c
 
 # ----------------------------------------------------------------------
 # Header files
 # ----------------------------------------------------------------------
 HEADER = \
-../source/driver_A4988.h
+../source/driver_A4988.h \
+../../../tools/rpi_tools/rpi_tools.h
 
 # ---------------------------------------------------------------------- 
 # Object files
 # ----------------------------------------------------------------------
 OBJ = \
 ../build/$(FILENAME).o \
-../build/driver_A4988.o
+../build/driver_A4988.o \
+../build/rpi_tools.o
 
 # ---------------------------------------------------------------------- 
 # binary code
@@ -33,7 +36,7 @@ BIN = ../build/$(FILENAME)
 
 
 $(BIN): $(OBJ)
-	$(CC) -o $(BIN) $(LDFLAGS) $(OBJ)
+	$(CC)  $(OBJ) -o $(BIN) $(LDFLAGS)
 
 $(OBJ) : $(SRC) $(HEADER)
 	$(CC) -c $(CFLAGS) $(SRC)

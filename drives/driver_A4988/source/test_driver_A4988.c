@@ -43,6 +43,7 @@ static void help()
     printf ("s = Motor STOP\n");  
     printf ("r = repeat motor sequence\n");
     printf ("t = test motion diagram\n");
+    printf ("g = draw motion diagram with gnuplot\n");
 }
 /*! --------------------------------------------------------------------
  * 
@@ -117,18 +118,40 @@ int main(int argc, char *argv[])
                         struct _motion_diagram_ *md = new_md(m1);   /* another motion diagram for motor 1 */
                         add_mp_with_omega (md, 2, 0);
                         add_mp_with_omega (md, 4, 2);
-                        add_mp_with_omega (md, 4, 6);                        
+                        add_mp_with_omega (md, 4, 6);
                         add_mp_with_omega (md, 2, 7);
-                        add_mp_with_omega (md, 1, 7);                                                
+                        add_mp_with_omega (md, 1, 7);
                         
                         #define SHOW_MD  md3                                                                    
-                        // show_md (SHOW_MD);
                         
                         mot_start_md (SHOW_MD);
                                                 
                         while (m1->mode != MOT_IDLE)    /* wait for MOT_IDLE */
                             usleep (10000);
                         printf ("--- ready\n");
+                        kill_all_md ();
+                    }
+                    break;
+                    
+                case 'g': {                                           /* draw motion diagram with gnuplot */
+                        struct _motion_diagram_ *md3 = new_md(m1);  /* new motion diagram for motor 1 */
+                        
+                        add_mp_with_omega (md3, 10.0, 0.5);                        
+                        add_mp_with_omega (md3, 10.0, 2);                        
+                        add_mp_with_omega (md3, 0, 3);                        
+                        add_mp_with_omega (md3, -10.0, 4);
+                        add_mp_with_omega (md3, -10.0, 5);
+                        add_mp_with_omega (md3, 0.0, 5.5);
+                        
+                        struct _motion_diagram_ *md = new_md(m1);   /* another motion diagram for motor 1 */
+                        add_mp_with_omega (md, 2, 0);
+                        add_mp_with_omega (md, 4, 2);
+                        add_mp_with_omega (md, 4, 6);
+                        add_mp_with_omega (md, 2, 7);
+                        add_mp_with_omega (md, 1, 7);
+                        
+                        gnuplot_md (md3);
+                        
                         kill_all_md ();
                     }
                     break;

@@ -156,6 +156,7 @@ extern struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc);
 extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
 extern int show_md (struct _motion_diagram_ *md);                   /* show diagram point */
+extern int gnuplot_md (struct _motion_diagram_ *md);
 
 extern struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t);       /* add an item to the end of the list */
 extern struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t);
@@ -165,4 +166,5 @@ extern int kill_mp (struct _move_point_ *mp);                                   
 extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */
 extern int counte_mp (struct _motion_diagram_ *md);
 extern int show_mp (struct _move_point_ *mp);
+
 

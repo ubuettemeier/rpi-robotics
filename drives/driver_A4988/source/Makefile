@@ -39,7 +39,7 @@ BIN = ../build/$(FILENAME)
 
 
 $(BIN): $(OBJ)
-	$(CC) -o $(BIN) $(LDFLAGS) $(OBJ)
+	$(CC) $(OBJ) -o $(BIN) $(LDFLAGS)
 
 $(OBJ) : $(SRC) $(HEADER)
 	$(CC) -c $(CFLAGS) $(SRC)

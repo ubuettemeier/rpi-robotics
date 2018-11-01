@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include "../../../tools/rpi_tools/rpi_tools.h"
 #include "../source/driver_A4988.h"
 
 int main() {

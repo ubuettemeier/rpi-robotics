@@ -31,12 +31,13 @@
  *      }
  */
 
-#define _USE_GPIO
+#define USE_GPIO
 #define _GNU_SOURCE
  
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifdef USE_GPIO
@@ -751,6 +752,59 @@ int show_md (struct _motion_diagram_ *md)
         mp = mp->next;
     }
         
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */
+int gnuplot_md (struct _motion_diagram_ *md)
+{
+    FILE *gp;
+    FILE *data;
+    char buf[256];
+    struct _move_point_ *mp = md->first_mp;
+    double miny = 10000.0, maxy = -10000.0;
+    double maxt = 0.0;
+    
+    if ((data = fopen ("graph.txt", "w+t")) == 0) {
+        printf ("Can't open graph.txt\n");
+        return EXIT_FAILURE;
+    }
+        
+    while (mp) {
+        if (mp->omega < miny) 
+            miny = mp->omega;
+        if (mp->omega > maxy) 
+            maxy = mp->omega;
+
+        if (mp->t > maxt)
+            maxt = mp->t;
+            
+        sprintf (buf, "%3.4f  %3.4f\n", mp->t, mp->omega);
+        fwrite (buf, strlen(buf), 1, data);
+        
+        mp = mp->next;
+    }
+    fclose (data);
+        
+    gp = popen("gnuplot -p" , "w");         
+    if (!gp) {
+        printf ("Can't open gnuplot\n");
+        return EXIT_FAILURE;
+    }
+        
+    fprintf (gp, "reset\n");
+    fprintf (gp, "set term x11\n");
+    fprintf (gp, "set pointsize 2\n");
+    fprintf (gp, "set xlabel %ct[s]%c\n", '"', '"');
+    fprintf (gp, "set ylabel %comega[s^-1]%c\n", '"', '"');
+    
+    fprintf (gp, "set yrange[%3.4f:%3.4f]\n", (miny>0.0) ? 0.0 : miny*1.2, (maxy <0.0) ? 0.0 : maxy*1.2);
+    fprintf (gp, "set xrange[-0.5:%4.3f]\n", maxt*1.2);
+    
+    fprintf (gp, "plot %cgraph.txt%c with linespoints pointtype 3\n", '"', '"');
+            
+    pclose (gp);
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
