@@ -8,8 +8,6 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-// #define MAX_ALPHA  100000.0    /* max angle acceleration */
-
 enum DIRECTION {
     MOT_CW = 0,
     MOT_CCW = 1
@@ -23,7 +21,12 @@ enum MOT_STATE {
     MOT_RUN = 0x04,
     MOT_SPEED_DOWN = 0x08,
     MOT_RUN_SPEED_DOWN = 0x10,
-    MOT_JOB_READY = 0x20
+    
+    MOT_START_MD = 0x20,
+    MOT_RUN_MD = 0x021,
+    MOT_RUN_SPEED_MD = 0x22,
+    
+    MOT_JOB_READY = 0x80
 };
 
 struct _thread_state_ {         /* thread state */
@@ -65,8 +68,10 @@ struct _mot_ctl_ {             /* motor control */
     double current_omega;       /* current angle-speed{rad/s] */
     double a_start, a_stop;     /* spped-up[s⁻2], speed-down[s⁻2] */
     
+    struct _move_point_ *mc_mp;     /* Motion Point default = NULL; for define use function mot_start_md()  */
+    
     struct timeval start, stop, run_start;
-    struct _mot_pin_ mp;        /* motor gpio-pins */
+    struct _mot_pin_ mp;       /* motor gpio-pins */
     
     struct _mot_ctl_ *next, *prev;
 };
@@ -77,14 +82,15 @@ extern struct _mot_ctl_ *first_mc, *last_mc;
  */
 struct _move_point_ {
     double omega;           /* angle-speed[rad/s] */
-    double t;               /* [s] t > prev->t */
+    double t;               /* [s] t >=  prev->t */
     double a;               /* angle acceleration */
     double phi;
     uint64_t steps;
+    uint64_t current_step;
     
-    double delta_omega;
-    double delta_t;
-    double delta_phi;       /* angle phi */      
+    double delta_omega;     /* omega - prev->omega */
+    double delta_t;         /* t - prev->t */
+    double delta_phi;       /* angle phi ??? */      
     
     struct _motion_diagram_ *owner;
     struct _move_point_ *next, *prev;
@@ -93,6 +99,7 @@ struct _move_point_ {
 struct _motion_diagram_ {
     struct _mot_ctl_ *mc;                       /* motor-pointer */
     double phi_all;
+    uint8_t data_set_is_incorrect;               /* default = 0. See: add_mp() */
     struct _move_point_ *first_mp, *last_mp;    /* first and last move point of motion diagramm */
     struct _motion_diagram_ *next, *prev;
 };
@@ -124,7 +131,7 @@ extern int mot_setparam (struct _mot_ctl_ *mc,          /* mc = motor handle */
 extern int mot_start (struct _mot_ctl_ *mc);
 extern int mot_stop (struct _mot_ctl_ *mc);
 
-/* extern int mot_start_md (struct _mot_ctl_ *mc, struct _motion_diagram_ *md); */
+extern int mot_start_md (struct _motion_diagram_ *md);                  /* Engine start. The motor follows the motion diagram. */
 
 extern int mot_switch_enable (struct _mot_ctl_ *mc, uint8_t enable);    /* set chip enable/disenable */
 extern int mot_enable (struct _mot_ctl_ *mc);
@@ -157,3 +164,5 @@ extern struct _move_point_ *insert_mp (struct _motion_diagram_ *md, double Hz, d
 extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */
 extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */
 extern int counte_mp (struct _motion_diagram_ *md);
+extern int show_mp (struct _move_point_ *mp);
+

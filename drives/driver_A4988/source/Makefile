@@ -12,6 +12,7 @@ FILENAME = test_driver_A4988
 SRC = \
 $(FILENAME).c \
 driver_A4988.c \
+rpi_tools.c \
 ../../../sensor/ultrasonic-HC-SR04/source/keypressed.c
 
 # ----------------------------------------------------------------------
@@ -19,6 +20,7 @@ driver_A4988.c \
 # ----------------------------------------------------------------------
 HEADER = \
 driver_A4988.h \
+rpi_tools.h \
 ../../../sensor/ultrasonic-HC-SR04/source/keypressed.h
 
 # ---------------------------------------------------------------------- 
@@ -27,6 +29,7 @@ driver_A4988.h \
 OBJ = \
 ../build/$(FILENAME).o \
 ../build/driver_A4988.o \
+../build/rpi_tools.o \
 ../build/keypressed.o 
 
 # ---------------------------------------------------------------------- 

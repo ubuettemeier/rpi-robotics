@@ -13,6 +13,7 @@
 #include <pthread.h>
 
 #include "driver_A4988.h"
+#include "rpi_tools.h"
 #include "../../../sensor/ultrasonic-HC-SR04/source/keypressed.h"
 
 #define ENABLE_PIN_M1 25     /* GPIO.25  PIN 37 */
@@ -53,8 +54,9 @@ int main(int argc, char *argv[])
     int sn = 0;
     double speed_rpm[3] = {150.0, 53.5, 250.0};
     
-    init_mot_ctl ();    
-    sleep (1);
+    init_mot_ctl ();   
+    show_usleep (1000000);       /* see: rpi_tools.h */
+    
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
 
     help();
@@ -96,21 +98,36 @@ int main(int argc, char *argv[])
                     mot_start (m1);
                     break;
                 case 't': {                 /* test moition diagramm */
+                        struct _motion_diagram_ *md3 = new_md(m1);  /* new motion diagram for motor 1 */
+                        
+                        add_mp_with_omega (md3, 10.0, 0.5);                        
+                        add_mp_with_omega (md3, 10.0, 2);                        
+                        add_mp_with_omega (md3, 0, 3);                        
+                        add_mp_with_omega (md3, -10.0, 4);
+                        add_mp_with_omega (md3, -10.0, 5);
+                        add_mp_with_omega (md3, 0.0, 5.5);
+                        
+                        
                         struct _motion_diagram_ *md2 = new_md(m1);  /* new motion diagram for motor 1 */
-                        add_mp_with_omega (md2, 2, 0);
-                        add_mp_with_omega (md2, -2, 2);
-                        add_mp_with_omega (md2, 0, 3);
+                        add_mp_with_omega (md2, 2, 0);                        
+                        add_mp_with_omega (md2, 0, 2);
+                        add_mp_with_omega (md2, -3, 3);
                         
                         struct _motion_diagram_ *md = new_md(m1);   /* another motion diagram for motor 1 */
                         add_mp_with_omega (md, 2, 0);
                         add_mp_with_omega (md, 4, 2);
                         add_mp_with_omega (md, 4, 6);                        
                         add_mp_with_omega (md, 2, 7);
-                        add_mp_with_omega (md, 1, 7);                        
+                        add_mp_with_omega (md, 1, 7);                                                
                         
-                        #define SHOW_MD  md
-                        printf ("count=%i  phi_all=%4.3f\n", counte_mp (SHOW_MD), SHOW_MD->phi_all);
+                        #define SHOW_MD  md3                                                                    
                         show_md (SHOW_MD);
+                        
+                        mot_start_md (SHOW_MD);
+                                                
+                        while (m1->mode != MOT_IDLE)    /* wait for MOT_IDLE */
+                            usleep (10000);
+                        printf ("--- ready\n");
                         kill_all_md ();
                     }
                     break;

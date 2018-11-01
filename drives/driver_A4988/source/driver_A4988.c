@@ -138,7 +138,7 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
 static int mot_run (struct _mot_ctl_ *mc)
 {
     int64_t timediff;
-    static int64_t latency;    
+    static int64_t latency; 
     
     switch (mc->mode) {        
         case MOT_START_RUN:
@@ -147,7 +147,7 @@ static int mot_run (struct _mot_ctl_ *mc)
             mc->num_rest = (mc->num_steps >= 0) ? mc->num_steps : 0;
             mc->current_stepcount = 0;              /* Current number of steps = 0 */
             mc->current_omega = 0.0;
-            latency = 0;                            
+            latency = 0;
             gettimeofday (&mc->start, NULL);        /* get start time */
             mc->run_start = mc->start;              /* memory start time */    
             mc->mode = (mc->a_start <= 0.0) ? MOT_RUN : MOT_SPEED_UP;            
@@ -174,6 +174,7 @@ static int mot_run (struct _mot_ctl_ *mc)
         case MOT_RUN:
         case MOT_RUN_SPEED_UP:
         case MOT_RUN_SPEED_DOWN:
+        case MOT_RUN_SPEED_MD:
             gettimeofday (&mc->stop, NULL); 
             if ((timediff = difference_micro (&mc->start, &mc->stop)) >= (mc->current_steptime - latency)) {    /* Execute step */
                 latency = execute_step (mc, timediff);                  
@@ -191,6 +192,8 @@ static int mot_run (struct _mot_ctl_ *mc)
                     mc->mode = MOT_SPEED_UP;
                 if (mc->mode == MOT_RUN_SPEED_DOWN) 
                     mc->mode = MOT_SPEED_DOWN;
+                if (mc->mode == MOT_RUN_SPEED_MD)
+                    mc->mode = MOT_RUN_MD;
             }
             break;
             
@@ -206,6 +209,57 @@ static int mot_run (struct _mot_ctl_ *mc)
             }
             break;
             
+        case MOT_RUN_MD: {
+                mc->mc_mp->current_step++;   
+                if (mc->mc_mp->current_step > mc->mc_mp->steps) {   /* end of MOT_RUN_MD */
+                    mc->mode = MOT_START_MD;                    
+                } else {                          
+                    double t;
+                    double new_omega;
+                    if (mc->mc_mp->a == 0.0) {                     /* omega const. */
+                        new_omega = mc->mc_mp->omega;
+                        
+                        if (new_omega < 0.0) mot_set_dir (mc, MOT_CCW);
+                        else mot_set_dir (mc, MOT_CW);
+                        
+                        t = mc->phi_per_step / new_omega;
+                    } else {                        
+                        double faktor = 1.0;                        /* CW */
+                        if ((mc->current_omega < 0.0) ||            /* CCW */
+                            ((mc->current_omega == 0.0) && (mc->mc_mp->a < 0.0))) {
+                            faktor = -1.0;   
+                        }
+                        new_omega = sqrt((mc->current_omega * mc->current_omega) + 2.0*(mc->mc_mp->a)*faktor*mc->phi_per_step) * faktor;
+                        
+                        if (new_omega < 0.0) mot_set_dir (mc, MOT_CCW);
+                        else mot_set_dir (mc, MOT_CW);
+                        
+                        t = (2.0 * faktor*mc->phi_per_step) / (mc->current_omega + new_omega);
+                    }                    
+                        
+                    mc->current_steptime = fabs(t) * 1000000.0;
+                    mc->current_omega = new_omega;                    
+                    latency = 0;
+                    
+                    gettimeofday (&mc->start, NULL);        
+                    mc->mode = MOT_RUN_SPEED_MD;
+                }
+            }
+            break;
+        case MOT_START_MD: {                                 
+                mc->mc_mp = mc->mc_mp->next;
+                if (!mc->mc_mp) {
+                    mc->mode = MOT_JOB_READY;                    
+                } else {                    
+                    if (mc->mc_mp->delta_t != 0.0) {
+                        show_mp (mc->mc_mp);
+                        mc->mc_mp->current_step = 0;
+                        mc->current_omega = mc->mc_mp->prev->omega;
+                        mc->mode = MOT_RUN_MD;
+                    }
+                }                                
+            }
+            break;
         case MOT_JOB_READY: 
             mc->mode = MOT_IDLE;
             mc->flag.aktiv = 0;
@@ -346,6 +400,8 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mc->omega = calc_omega (mc->steps_per_turn, mc->steptime);
     mc->a_start = mc->a_stop = 0.0;                             /* speed-up, speed-down */
     
+    mc->mc_mp = NULL;                       /* moition point; for define use function mot_start_md()  */
+    
     mc->next = mc->prev = NULL;
     if (first_mc == NULL) {
         first_mc = last_mc = mc;
@@ -470,6 +526,32 @@ int mot_stop (struct _mot_ctl_ *mc)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
+ * @brief   Engine start. The motor follows the motion diagram.
+ */ 
+int mot_start_md (struct _motion_diagram_ *md)
+{
+    if (!md || !md->mc)
+        return EXIT_FAILURE;
+    
+    if (md->data_set_is_incorrect) {
+        printf ("Data set is incorrect. ERROR No.: %i\n", md->data_set_is_incorrect);
+        return EXIT_FAILURE;
+    }
+    
+    // printf ("***** md->data_set_is_incorrect = %i\n", md->data_set_is_incorrect);
+    
+    if (md->mc->mode == MOT_IDLE) {
+        mot_enable (md->mc);
+        md->mc->max_latency = 0;
+        md->mc->mc_mp = md->first_mp;
+        md->mc->current_omega = md->first_mp->omega;
+        gettimeofday (&md->mc->run_start, NULL);
+        md->mc->mode = MOT_START_MD;
+    }
+    
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
  * @brief  set chip enable/disenable
  *          chip enable-pin is low aktiv
  */ 
@@ -583,6 +665,7 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
     mp->next = mp->prev = NULL;
     md->first_mp = md->last_mp = mp;
 
+    md->data_set_is_incorrect = 0;
     md->mc = mc;
     md->phi_all = 0.0;
     md->next = md->prev = NULL;    
@@ -628,6 +711,27 @@ extern int kill_all_md (void)
 /*! --------------------------------------------------------------------
  * 
  */
+int show_mp (struct _move_point_ *mp)
+{
+    if (!mp)
+        return EXIT_FAILURE;
+
+    if (mp->prev) printf ("prev->omega_0=%4.3f  ", mp->prev->omega);
+    else printf ("omega_0=NIL     ");
+    
+    printf ("omega=%4.3f  delta_omega=%4.3f  delta_t=%2.4f  delta_phi = %2.3f  steps=%llu  a=%4.3f\n", 
+             mp->omega,
+             mp->delta_omega, 
+             mp->delta_t,              
+             mp->delta_phi,
+             mp->steps,
+             mp->a);
+        
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */
 int show_md (struct _motion_diagram_ *md)
 {
     if (!md)
@@ -636,7 +740,13 @@ int show_md (struct _motion_diagram_ *md)
     struct _move_point_ *mp = md->first_mp;
     
     while (mp) {
-        printf ("t=%4.3f  steps=%6llu  omega=%4.3f  a=%4.3f  delta_phi=%4.3f  phi=%4.3f\n", mp->t, mp->steps, mp->omega, mp->a, mp->delta_phi, mp->phi);
+        printf ("t=%4.3f  steps=%6llu  omega=%4.3f  a=%4.3f  delta_phi=%4.3f  phi=%4.3f\n", 
+                 mp->t, 
+                 mp->steps, 
+                 mp->omega, 
+                 mp->a, 
+                 mp->delta_phi, 
+                 mp->phi);
         mp = mp->next;
     }
         
@@ -650,20 +760,33 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     if (md == NULL)
         return NULL;
         
-    if (t < md->last_mp->t)     /* negative time */
+    if (t < md->last_mp->t) {                               /* negative time */
+        md->data_set_is_incorrect = 1;
+        printf ("ERROR: negative time \n");
         return (NULL);
+    }
+        
+    double omega = 2.0 * M_PI * Hz;
+    if (((md->last_mp->omega > 0.0) && (omega < 0.0)) || 
+        ((md->last_mp->omega < 0.0) && (omega > 0.0))) {    /* zero passage */           
+            md->data_set_is_incorrect = 2;
+            printf ("ERROR: zero passage \n");
+            return (NULL);
+    }
         
     struct _move_point_ *mp = (struct _move_point_ *) malloc (sizeof(struct _move_point_));    
     
-    mp->omega = 2.0 * M_PI * Hz;
+    mp->omega = omega;
     mp->t = t;
         
     mp->delta_t = mp->t - md->last_mp->t;        
     mp->delta_omega = mp->omega - md->last_mp->omega;
     mp->a = (mp->delta_t > 0.0) ? mp->delta_omega / mp->delta_t : 0.0;    
-    mp->delta_phi = (md->last_mp->omega * mp->delta_t) + (mp->a * (mp->delta_t * mp->delta_t) / 2.0);
+    // mp->delta_phi = (md->last_mp->omega * mp->delta_t) + ((mp->a) * (mp->delta_t * mp->delta_t) / 2.0);
+    mp->delta_phi = (md->last_mp->omega + mp->omega) / 2.0 * mp->delta_t;
         
-    mp->steps = ((md->last_mp->omega * mp->delta_t) + (fabs(mp->a) * (mp->delta_t * mp->delta_t) / 2.0)) / md->mc->phi_per_step;    /* num of steps for this point */
+    // mp->steps = (((md->last_mp->omega) * mp->delta_t) + (fabs(mp->a) * (mp->delta_t * mp->delta_t) / 2.0)) / md->mc->phi_per_step;    /* num of steps for this point */
+    mp->steps = fabs(mp->delta_phi) / md->mc->phi_per_step;
         
     mp->owner = md;
     mp->owner->phi_all += mp->delta_phi;
