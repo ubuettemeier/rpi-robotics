@@ -30,14 +30,19 @@
  *          return ( 0 );
  *      }
  */
- 
+
+#define _USE_GPIO
 #define _GNU_SOURCE
  
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+
+#ifdef USE_GPIO
 #include <wiringPi.h>
+#endif
+
 #include <sys/time.h>
 #include <pthread.h>
 #include <sched.h>
@@ -89,6 +94,7 @@ static void printSchedulingPolicy(void)
 static int mot_step (struct _mot_ctl_ *mc)
 {
     if (mc) {
+#ifdef USE_GPIO
         digitalWrite (mc->mp.step_pin, 0);
         digitalWrite (mc->mp.step_pin, 1);
         asm ("nop");
@@ -96,6 +102,7 @@ static int mot_step (struct _mot_ctl_ *mc)
         asm ("nop");
         asm ("nop");
         digitalWrite (mc->mp.step_pin, 0);
+#endif
     } else return (EXIT_FAILURE);
     
     return EXIT_SUCCESS;
@@ -243,7 +250,6 @@ static int mot_run (struct _mot_ctl_ *mc)
                     mc->mode = MOT_JOB_READY;                    
                 } else {                    
                     if (mc->mc_mp->delta_t != 0.0) {
-                        // show_mp (mc->mc_mp);
                         mc->mc_mp->current_step = 0;
                         mc->current_omega = mc->mc_mp->prev->omega;
                         mc->mode = MOT_RUN_MD;
@@ -312,10 +318,12 @@ void *run_A4988 (void *data)
 
 int init_mot_ctl()
 {    
+#ifdef USE_GPIO
     if( wiringPiSetup() < 0) {
         printf ("wiringPiSetup failed !\n");
         return EXIT_FAILURE;
     } else printf ("-- wiringPi initialisiert\n");
+#endif
     
     if (!thread_A4988) {         /* glob thread handle */
         thread_state.run = 0;
@@ -348,10 +356,12 @@ void mot_initpins (struct _mot_ctl_ *mc)
 {
     if (!mc) 
         return;
-    
+   
+#ifdef USE_GPIO
     pinMode (mc->mp.enable_pin, OUTPUT);
     pinMode (mc->mp.dir_pin, OUTPUT);
     pinMode (mc->mp.step_pin, OUTPUT);
+#endif    
 }
 /*! --------------------------------------------------------------------
  * @brief  create dynamic memory for motor parameter
@@ -379,7 +389,9 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
         
     mot_disenable (mc);                     /* flag enable is updated */
     mot_set_dir (mc, MOT_CW);               /* flag dir is updated */
+#ifdef USE_GPIO
     digitalWrite (mc->mp.step_pin, 0);
+#endif
     
     mc->steps_per_turn = steps_per_turn;   
     mc->phi_per_step = 2.0 * M_PI / (double)mc->steps_per_turn;    
@@ -550,7 +562,9 @@ int mot_start_md (struct _motion_diagram_ *md)
 int mot_switch_enable (struct _mot_ctl_ *mc, uint8_t enable)
 {
     if (mc) {
+#ifdef USE_GPIO
         digitalWrite (mc->mp.enable_pin, (mc->flag.enable = enable));
+#endif    
     } else return EXIT_FAILURE;
     
     return EXIT_SUCCESS;
@@ -574,8 +588,9 @@ int mot_set_dir (struct _mot_ctl_ *mc, uint8_t direction)
 {
     if (!mc) 
         return EXIT_FAILURE;
-        
+#ifdef USE_GPIO
     digitalWrite (mc->mp.dir_pin, (mc->flag.dir = direction));
+#endif    
         
     return EXIT_SUCCESS;
 }
