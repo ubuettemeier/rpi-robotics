@@ -11,13 +11,13 @@ FILENAME = test_i2c_24c64
 # ----------------------------------------------------------------------
 SRC = \
 $(FILENAME).c \
-../../../sensor/ultrasonic-HC-SR04/source/keypressed.c
+../../../tools/keypressed/keypressed.c
 
 # ----------------------------------------------------------------------
 # Header files
 # ----------------------------------------------------------------------
 HEADER = \
-../../../sensor/ultrasonic-HC-SR04/source/keypressed.h
+../../../tools/keypressed/keypressed.h
 
 # ---------------------------------------------------------------------- 
 # Object files

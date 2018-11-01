@@ -13,8 +13,8 @@
 #include <pthread.h>
 
 #include "driver_A4988.h"
-#include "rpi_tools.h"
-#include "../../../sensor/ultrasonic-HC-SR04/source/keypressed.h"
+#include "../../../tools/rpi_tools/rpi_tools.h"
+#include "../../../tools/keypressed/keypressed.h"
 
 #define ENABLE_PIN_M1 25     /* GPIO.25  PIN 37 */
 #define STEP_PIN_M1   24     /* GPIO.24  PIN 35 */
@@ -42,6 +42,7 @@ static void help()
     printf ("e = start m1 CW endless steps\n");  
     printf ("s = Motor STOP\n");  
     printf ("r = repeat motor sequence\n");
+    printf ("t = test motion diagram\n");
 }
 /*! --------------------------------------------------------------------
  * 
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
     double speed_rpm[3] = {150.0, 53.5, 250.0};
     
     init_mot_ctl ();   
-    show_usleep (1000000);       /* see: rpi_tools.h */
+    show_usleep (1000000, 100000);       /* see: rpi_tools.h */
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
 
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
                         add_mp_with_omega (md, 1, 7);                                                
                         
                         #define SHOW_MD  md3                                                                    
-                        show_md (SHOW_MD);
+                        // show_md (SHOW_MD);
                         
                         mot_start_md (SHOW_MD);
                                                 

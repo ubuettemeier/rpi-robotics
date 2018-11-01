@@ -12,16 +12,16 @@ FILENAME = test_driver_A4988
 SRC = \
 $(FILENAME).c \
 driver_A4988.c \
-rpi_tools.c \
-../../../sensor/ultrasonic-HC-SR04/source/keypressed.c
+../../../tools/rpi_tools/rpi_tools.c \
+../../../tools/keypressed/keypressed.c
 
 # ----------------------------------------------------------------------
 # Header files
 # ----------------------------------------------------------------------
 HEADER = \
 driver_A4988.h \
-rpi_tools.h \
-../../../sensor/ultrasonic-HC-SR04/source/keypressed.h
+../../../tools/rpi_tools/rpi_tools.h \
+../../../tools/keypressed/keypressed.h
 
 # ---------------------------------------------------------------------- 
 # Object files

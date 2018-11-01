@@ -14,14 +14,16 @@ FILENAME = test_hc_sr04
 SRC = \
 $(FILENAME).c \
 hc_sr04.c \
-keypressed.c
+../../../tools/keypressed/keypressed.c \
+../../../tools/rpi_tools/rpi_tools.c
 
 # ----------------------------------------------------------------------
 # Header files
 # ----------------------------------------------------------------------
 HEADER = \
 hc_sr04.h \
-keypressed.h
+../../../tools/keypressed/keypressed.h \
+../../../tools/rpi_tools/rpi_tools.h
 
 # ---------------------------------------------------------------------- 
 # Object files
@@ -29,7 +31,8 @@ keypressed.h
 OBJ = \
 ../build/$(FILENAME).o \
 ../build/hc_sr04.o \
-../build/keypressed.o
+../build/keypressed.o \
+../build/rpi_tools.o
 
 # ---------------------------------------------------------------------- 
 # binary code

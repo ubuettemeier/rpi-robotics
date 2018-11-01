@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <wiringPi.h>
 
-#include "keypressed.h"
+#include "../../../tools/keypressed/keypressed.h"
 #include "hc_sr04.h"
 
 #define MAX_SENSOR 2

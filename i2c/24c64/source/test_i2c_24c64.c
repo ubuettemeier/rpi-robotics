@@ -13,7 +13,7 @@
 #include <netinet/in.h>      /* htons */
 #include <linux/i2c-dev.h>
 
-#include "../../../sensor/ultrasonic-HC-SR04/source/keypressed.h"
+#include "../../../tools/keypressed/keypressed.h"
 
 #define ADDR_24CXX  0x50   /* 0x50...0x57 */
 

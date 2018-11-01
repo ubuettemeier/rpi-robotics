@@ -14,7 +14,7 @@
 #include <linux/i2c-dev.h>
 #include <fcntl.h>
 
-#include "../../../sensor/ultrasonic-HC-SR04/source/keypressed.h"
+#include "../../../tools/keypressed/keypressed.h"
 
 #define PCF8591_ADDR  0x48	/* A0, A1, A2 = GND */
 #define ADC0 0x00

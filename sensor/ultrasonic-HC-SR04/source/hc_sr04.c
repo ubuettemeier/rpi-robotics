@@ -13,6 +13,7 @@
 #include <wiringPi.h>
 #include <pthread.h>
 
+#include "../../../tools/rpi_tools/rpi_tools.h"
 #include "hc_sr04.h"
 
 struct _hc_sr04_ *first_hc_sr04 = NULL, *end_hc_sr04 = NULL;   /* pointer to sensor list */
@@ -125,17 +126,6 @@ void stop_hc_04_thread ()
     pthread_mutex_destroy(&hc_sr04_mutex); 
     hc_sr04_thread = (pthread_t)NULL;                  /* thread handle */
   }
-}
-/*!	--------------------------------------------------------------------
- * @brief   calculates time difference in us
- * @return  stop - start
- */
-static int difference_micro (struct timeval *start, struct timeval *stop)
-{
-  return ((signed long long) stop->tv_sec * 1000000ll +
-          (signed long long) stop->tv_usec) -	       
-          ((signed long long) start->tv_sec * 1000000ll +
-           (signed long long) start->tv_usec);
 }
 /*!	--------------------------------------------------------------------
  * @brief  wait until the echo signal has reached the value "state".

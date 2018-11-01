@@ -43,6 +43,7 @@
 #include <sched.h>
 #include <math.h>
  
+#include "../../../tools/rpi_tools/rpi_tools.h"
 #include "driver_A4988.h"
 
 
@@ -56,17 +57,7 @@ struct _mot_ctl_ *first_mc = NULL, *last_mc = NULL;   /* motor control */
 uint8_t is_init = 0;
 
 struct _motion_diagram_ *first_md = NULL, *last_md = NULL;  /* motion diagram */
-/*!	--------------------------------------------------------------------
- * @brief   calculates time difference in us
- * @return  stop - start
- */
-static int64_t difference_micro (struct timeval *start, struct timeval *stop)
-{
-  return ((int64_t) stop->tv_sec * 1000000ll +
-          (int64_t) stop->tv_usec) -	       
-          ((int64_t) start->tv_sec * 1000000ll +
-           (int64_t) start->tv_usec);
-}
+
 /*! --------------------------------------------------------------------
  * 
  */
@@ -252,7 +243,7 @@ static int mot_run (struct _mot_ctl_ *mc)
                     mc->mode = MOT_JOB_READY;                    
                 } else {                    
                     if (mc->mc_mp->delta_t != 0.0) {
-                        show_mp (mc->mc_mp);
+                        // show_mp (mc->mc_mp);
                         mc->mc_mp->current_step = 0;
                         mc->current_omega = mc->mc_mp->prev->omega;
                         mc->mode = MOT_RUN_MD;
@@ -299,14 +290,15 @@ void *run_A4988 (void *data)
             while (mc) {
                 if (mc->mode != MOT_IDLE) {
                     mot_run (mc);                
-                    all_mot_idle = 0;
+                    all_mot_idle = 0;                    
                 }
                 mc = mc->next;
             }
         }
         
-        if (all_mot_idle) 
-            usleep (1000);    
+        if (all_mot_idle) {
+            usleep (1000); 
+        }
     }
     printf ("-- <run_A4988> is stoped\n");    
     thread_state.run = 0;
@@ -709,7 +701,7 @@ extern int kill_all_md (void)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief   show diagram point
  */
 int show_mp (struct _move_point_ *mp)
 {
@@ -730,7 +722,7 @@ int show_mp (struct _move_point_ *mp)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief   show diagram points
  */
 int show_md (struct _motion_diagram_ *md)
 {
@@ -740,13 +732,7 @@ int show_md (struct _motion_diagram_ *md)
     struct _move_point_ *mp = md->first_mp;
     
     while (mp) {
-        printf ("t=%4.3f  steps=%6llu  omega=%4.3f  a=%4.3f  delta_phi=%4.3f  phi=%4.3f\n", 
-                 mp->t, 
-                 mp->steps, 
-                 mp->omega, 
-                 mp->a, 
-                 mp->delta_phi, 
-                 mp->phi);
+        show_mp (mp);       /* show diagram point */
         mp = mp->next;
     }
         
@@ -782,10 +768,8 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     mp->delta_t = mp->t - md->last_mp->t;        
     mp->delta_omega = mp->omega - md->last_mp->omega;
     mp->a = (mp->delta_t > 0.0) ? mp->delta_omega / mp->delta_t : 0.0;    
-    // mp->delta_phi = (md->last_mp->omega * mp->delta_t) + ((mp->a) * (mp->delta_t * mp->delta_t) / 2.0);
     mp->delta_phi = (md->last_mp->omega + mp->omega) / 2.0 * mp->delta_t;
         
-    // mp->steps = (((md->last_mp->omega) * mp->delta_t) + (fabs(mp->a) * (mp->delta_t * mp->delta_t) / 2.0)) / md->mc->phi_per_step;    /* num of steps for this point */
     mp->steps = fabs(mp->delta_phi) / md->mc->phi_per_step;
         
     mp->owner = md;
@@ -803,7 +787,9 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     
     return mp;
 }
-
+/*! --------------------------------------------------------------------
+ * 
+ */
 struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t)
 {
     return add_mp (md, omega / 2.0 / M_PI, t);
