@@ -506,6 +506,12 @@ int mot_start (struct _mot_ctl_ *mc)
         printf ("parameter num_steps failed\n");
         return (EXIT_FAILURE);
     }
+    
+    if (mc->mode != MOT_IDLE) {
+        printf ("Can't start motor\n");
+        return EXIT_FAILURE;
+    }
+    
     mot_enable (mc);
     mc->mode = MOT_START_RUN;        
     mc->flag.aktiv = 1;
@@ -521,7 +527,7 @@ int mot_stop (struct _mot_ctl_ *mc)
         return EXIT_FAILURE;
     
     if (mc->mode != MOT_IDLE) {
-        if (mc->a_stop > 0.0) {
+        if (mc->a_stop > 0.0) {                             /* stop with speed-down */
             mc->num_rest = calc_steps_for_step_down (mc);
             mc->mode = MOT_SPEED_DOWN;
         }
@@ -530,6 +536,19 @@ int mot_stop (struct _mot_ctl_ *mc)
     
     return EXIT_SUCCESS;
 }
+/*! --------------------------------------------------------------------
+ * @brief   Engine stopping without ramp.
+ */ 
+int mot_fast_stop (struct _mot_ctl_ *mc)
+{
+    if (!mc) 
+        return EXIT_FAILURE;
+    
+    if (mc->mode != MOT_IDLE)
+        mc->mode = MOT_JOB_READY;    
+        
+    return EXIT_SUCCESS;
+} 
 /*! --------------------------------------------------------------------
  * @brief   Engine start. The motor follows the motion diagram.
  */ 
@@ -541,18 +560,19 @@ int mot_start_md (struct _motion_diagram_ *md)
     if (md->data_set_is_incorrect) {
         printf ("Data set is incorrect. ERROR No.: %i\n", md->data_set_is_incorrect);
         return EXIT_FAILURE;
+    }    
+    
+    if (md->mc->mode != MOT_IDLE) {
+        printf ("Can't start motorprogram\n");
+        return EXIT_FAILURE;
     }
     
-    // printf ("***** md->data_set_is_incorrect = %i\n", md->data_set_is_incorrect);
-    
-    if (md->mc->mode == MOT_IDLE) {
-        mot_enable (md->mc);
-        md->mc->max_latency = 0;
-        md->mc->mc_mp = md->first_mp;
-        md->mc->current_omega = md->first_mp->omega;
-        gettimeofday (&md->mc->run_start, NULL);
-        md->mc->mode = MOT_START_MD;
-    }
+    mot_enable (md->mc);
+    md->mc->max_latency = 0;
+    md->mc->mc_mp = md->first_mp;
+    md->mc->current_omega = md->first_mp->omega;
+    gettimeofday (&md->mc->run_start, NULL);
+    md->mc->mode = MOT_START_MD;
     
     return EXIT_SUCCESS;
 }
@@ -673,6 +693,10 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
     mp->next = mp->prev = NULL;
     md->first_mp = md->last_mp = mp;
 
+    md->max_omega = 0.5;
+    md->min_omega = -0.5;
+    md->max_t = 0.5;
+    
     md->data_set_is_incorrect = 0;
     md->mc = mc;
     md->phi_all = 0.0;
@@ -755,54 +779,62 @@ int show_md (struct _motion_diagram_ *md)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
- * 
+ * æbrief   write motion data to a file
  */
-int gnuplot_md (struct _motion_diagram_ *md)
+int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname)
 {
-    FILE *gp;
     FILE *data;
     char buf[256];
-    struct _move_point_ *mp = md->first_mp;
-    double miny = 10000.0, maxy = -10000.0;
-    double maxt = 0.0;
     
-    if ((data = fopen ("graph.txt", "w+t")) == 0) {
-        printf ("Can't open graph.txt\n");
+    if ((data = fopen (fname, "w+t")) == 0) {
+        printf ("Can't open %s\n", fname);
         return EXIT_FAILURE;
     }
-        
-    while (mp) {
-        if (mp->omega < miny) 
-            miny = mp->omega;
-        if (mp->omega > maxy) 
-            maxy = mp->omega;
-
-        if (mp->t > maxt)
-            maxt = mp->t;
-            
+    
+    struct _move_point_ *mp = md->first_mp;
+    
+    sprintf (buf, "# x=t[s]   y=omega[s^-1]\n");    
+    fwrite (buf, strlen(buf), 1, data);
+    while (mp) {                    
         sprintf (buf, "%3.4f  %3.4f\n", mp->t, mp->omega);
         fwrite (buf, strlen(buf), 1, data);
         
         mp = mp->next;
     }
     fclose (data);
+    
+    return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * @brief   display motion diagram with gnupolt
+ */
+int gnuplot_md (struct _motion_diagram_ *md)
+{
+    FILE *gp;    
+    
+    if (gnuplot_write_graph_data_file (md, "graph.txt") != EXIT_SUCCESS) {      /* write motion data to a file */
+        printf ("Can't write diagram data to graph.txt\n");
+        return EXIT_FAILURE;
+    }    
         
-    gp = popen("gnuplot -p" , "w");         
-    if (!gp) {
+    if ((gp = popen("gnuplot -p" , "w")) == NULL) {
         printf ("Can't open gnuplot\n");
         return EXIT_FAILURE;
     }
         
     fprintf (gp, "reset\n");
     fprintf (gp, "set term x11\n");
-    fprintf (gp, "set pointsize 2\n");
+
     fprintf (gp, "set xlabel %ct[s]%c\n", '"', '"');
     fprintf (gp, "set ylabel %comega[s^-1]%c\n", '"', '"');
     
-    fprintf (gp, "set yrange[%3.4f:%3.4f]\n", (miny>0.0) ? 0.0 : miny*1.2, (maxy <0.0) ? 0.0 : maxy*1.2);
-    fprintf (gp, "set xrange[-0.5:%4.3f]\n", maxt*1.2);
+    fprintf (gp, "set xzeroaxis lt 2 lw 1 lc rgb %c#FF0000%c\n", '"', '"');
+    fprintf (gp, "set yzeroaxis lt 2 lw 1 lc rgb %c#FF0000%c\n", '"', '"');
     
-    fprintf (gp, "plot %cgraph.txt%c with linespoints pointtype 3\n", '"', '"');
+    fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega * 1.2, md->max_omega * 1.2);    
+    fprintf (gp, "set xrange[-0.5:%4.3f]\n", md->max_t * 1.2);
+    
+    fprintf (gp, "plot %cgraph.txt%c with linespoints lw 3 lc rgb %c#0000FF%c  pt 7 ps 3\n", '"', '"', '"', '"');
             
     pclose (gp);
     return EXIT_SUCCESS;
@@ -845,6 +877,12 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     mp->owner->phi_all += mp->delta_phi;
     mp->phi = mp->owner->phi_all;
     
+    if (mp->omega > md->max_omega) 
+        md->max_omega = mp->omega;
+    if (mp->omega < md->min_omega) 
+        md->min_omega = mp->omega;
+    md->max_t = t;
+    
     mp->next = mp->prev = NULL;
     if (md->first_mp == NULL) {        
         md->first_mp = md->last_mp = mp;
@@ -857,18 +895,11 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     return mp;
 }
 /*! --------------------------------------------------------------------
- * 
+ * @brief   add an item to the end of the list
  */
 struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t)
 {
     return add_mp (md, omega / 2.0 / M_PI, t);
-}
-/*! --------------------------------------------------------------------
- * 
- */
-struct _move_point_ *insert_mp (struct _motion_diagram_ *md, double Hz, double t)
-{
-    return NULL;
 }
 /*! --------------------------------------------------------------------
  * @brief   delete move point in motion diagram
@@ -905,7 +936,7 @@ int kill_all_mp (struct _motion_diagram_ *md)
 /*! --------------------------------------------------------------------
  * 
  */
-extern int counte_mp (struct _motion_diagram_ *md)
+extern int count_mp (struct _motion_diagram_ *md)
 {
     int n = 0;
     

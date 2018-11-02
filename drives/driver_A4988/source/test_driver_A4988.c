@@ -38,10 +38,13 @@ static void help()
     printf ("1 = start m1 CW 400 steps\n");  
     printf ("2 = start m1 CCW 400 steps\n"); 
     printf ("8 = new speed\n"); 
-    printf ("9 = Motor disenable\n\n");  
+    printf ("9 = Motor disenable\n");
+    printf ("\n");  
     printf ("e = start m1 CW endless steps\n");  
-    printf ("s = Motor STOP\n");  
+    printf ("s = Motor STOP\n"); 
+    printf ("f = motor fast stop\n"); 
     printf ("r = repeat motor sequence\n");
+    printf ("\n");
     printf ("t = test motion diagram\n");
     printf ("g = draw motion diagram with gnuplot\n");
 }
@@ -55,11 +58,20 @@ int main(int argc, char *argv[])
     uint8_t ende = 0;   
     int sn = 0;
     double speed_rpm[3] = {150.0, 53.5, 250.0};
+    struct _motion_diagram_ *md = NULL;
     
     init_mot_ctl ();   
     show_usleep (1000000, 100000);       /* see: rpi_tools.h */
     
-    m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);
+    m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
+
+    md = new_md(m1);                     /* new motion diagram for motor 1 */                        
+    add_mp_with_omega (md, 10.0, 0.5);                        
+    add_mp_with_omega (md, 10.0, 2);                        
+    add_mp_with_omega (md, 0, 3);                        
+    add_mp_with_omega (md, -10.0, 4);
+    add_mp_with_omega (md, -10.0, 5);
+    add_mp_with_omega (md, 0.0, 5.5);
 
     help();
     init_check_keypressed();                           /* init key-touch control */
@@ -78,8 +90,10 @@ int main(int argc, char *argv[])
                     break;
                 case '1':
                 case '2':                  /* set motor sequence */
-                    mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400, 3*G, 5*G);
-                    mot_start (m1);
+                    if (m1->mode == MOT_IDLE) {
+                        mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400, 3*G, 5*G);
+                        mot_start (m1);
+                    }
                     break;   
                 case '8':
                     sn = (sn < 2) ? sn+1 : 0;
@@ -89,77 +103,34 @@ int main(int argc, char *argv[])
                     mot_disenable (m1);
                     break;                
                 case 'e':                   /* set endless motor sequence (steps = 0) */
-                    mot_setparam (m1, MOT_CW, 0, 3*G, 5*G);
-                    mot_set_rpm (m1, 200.0);
-                    mot_start (m1);
+                    if (m1->mode == MOT_IDLE) {
+                        mot_setparam (m1, MOT_CW, 0, 3*G, 5*G);
+                        mot_set_rpm (m1, 200.0);
+                        mot_start (m1);
+                    }
                     break;                   
                 case 's':
                     mot_stop (m1);
                     break;
+                case 'f':
+                    mot_fast_stop (m1);
+                    break;
                 case 'r':                   /* repeat motor sequence */
-                    mot_start (m1);
+                    if (m1->mode == MOT_IDLE) 
+                        mot_start (m1);
                     break;
-                case 't': {                 /* test moition diagramm */
-                        struct _motion_diagram_ *md3 = new_md(m1);  /* new motion diagram for motor 1 */
-                        
-                        add_mp_with_omega (md3, 10.0, 0.5);                        
-                        add_mp_with_omega (md3, 10.0, 2);                        
-                        add_mp_with_omega (md3, 0, 3);                        
-                        add_mp_with_omega (md3, -10.0, 4);
-                        add_mp_with_omega (md3, -10.0, 5);
-                        add_mp_with_omega (md3, 0.0, 5.5);
-                        
-                        
-                        struct _motion_diagram_ *md2 = new_md(m1);  /* new motion diagram for motor 1 */
-                        add_mp_with_omega (md2, 2, 0);                        
-                        add_mp_with_omega (md2, 0, 2);
-                        add_mp_with_omega (md2, -3, 3);
-                        
-                        struct _motion_diagram_ *md = new_md(m1);   /* another motion diagram for motor 1 */
-                        add_mp_with_omega (md, 2, 0);
-                        add_mp_with_omega (md, 4, 2);
-                        add_mp_with_omega (md, 4, 6);
-                        add_mp_with_omega (md, 2, 7);
-                        add_mp_with_omega (md, 1, 7);
-                        
-                        #define SHOW_MD  md3                                                                    
-                        
-                        mot_start_md (SHOW_MD);
-                                                
-                        while (m1->mode != MOT_IDLE)    /* wait for MOT_IDLE */
-                            usleep (10000);
-                        printf ("--- ready\n");
-                        kill_all_md ();
-                    }
-                    break;
-                    
-                case 'g': {                                           /* draw motion diagram with gnuplot */
-                        struct _motion_diagram_ *md3 = new_md(m1);  /* new motion diagram for motor 1 */
-                        
-                        add_mp_with_omega (md3, 10.0, 0.5);                        
-                        add_mp_with_omega (md3, 10.0, 2);                        
-                        add_mp_with_omega (md3, 0, 3);                        
-                        add_mp_with_omega (md3, -10.0, 4);
-                        add_mp_with_omega (md3, -10.0, 5);
-                        add_mp_with_omega (md3, 0.0, 5.5);
-                        
-                        struct _motion_diagram_ *md = new_md(m1);   /* another motion diagram for motor 1 */
-                        add_mp_with_omega (md, 2, 0);
-                        add_mp_with_omega (md, 4, 2);
-                        add_mp_with_omega (md, 4, 6);
-                        add_mp_with_omega (md, 2, 7);
-                        add_mp_with_omega (md, 1, 7);
-                        
-                        gnuplot_md (md3);
-                        
-                        kill_all_md ();
-                    }
+                case 't':                   /* test moition diagramm */                                                
+                    mot_start_md (md);                                            
+                    break;                    
+                case 'g':              /* draw motion diagram with gnuplot */
+                    gnuplot_md (md);                        
                     break;
             }
         }           
         usleep (1000);                                /* wait 1ms */
     }
     
+    kill_all_md ();    
     destroy_check_keypressed();                       /* destroy key-touch control */
     return EXIT_SUCCESS;
 }

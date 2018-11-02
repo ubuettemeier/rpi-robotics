@@ -100,6 +100,8 @@ struct _motion_diagram_ {
     struct _mot_ctl_ *mc;                       /* motor-pointer */
     double phi_all;
     uint8_t data_set_is_incorrect;               /* default = 0. See: add_mp() */
+    double max_omega, min_omega;
+    double max_t;
     struct _move_point_ *first_mp, *last_mp;    /* first and last move point of motion diagramm */
     struct _motion_diagram_ *next, *prev;
 };
@@ -122,14 +124,15 @@ extern int count_mot (void);
 
 extern void mot_initpins (struct _mot_ctl_ *mc);        /* configures motor gpio  */
 
-extern int mot_setparam (struct _mot_ctl_ *mc,          /* mc = motor handle */
+extern int mot_setparam (struct _mot_ctl_ *mc,        /* mc = motor handle */
                           uint8_t dir,                  /* dir==0 CW, dir==1 CCW */
-                          uint64_t num_steps,               /* steps == 0 motor runs endless */
+                          uint64_t num_steps,           /* steps == 0 motor runs endless */
                           double a_start,               /* alpha Start [s⁻2] */
                           double a_stop);               /* alpha stop [s⁻2] */
                           
 extern int mot_start (struct _mot_ctl_ *mc);
 extern int mot_stop (struct _mot_ctl_ *mc);
+extern int mot_fast_stop (struct _mot_ctl_ *mc);      /* Engine stopping without ramp. */
 
 extern int mot_start_md (struct _motion_diagram_ *md);                  /* Engine start. The motor follows the motion diagram. */
 
@@ -156,15 +159,16 @@ extern struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc);
 extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
 extern int show_md (struct _motion_diagram_ *md);                   /* show diagram point */
-extern int gnuplot_md (struct _motion_diagram_ *md);
+
+extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
+extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */
 
 extern struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t);       /* add an item to the end of the list */
 extern struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t);
 
-extern struct _move_point_ *insert_mp (struct _motion_diagram_ *md, double Hz, double t);    /* insert item */
 extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */
 extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */
-extern int counte_mp (struct _motion_diagram_ *md);
+extern int count_mp (struct _motion_diagram_ *md);
 extern int show_mp (struct _move_point_ *mp);
 
 
