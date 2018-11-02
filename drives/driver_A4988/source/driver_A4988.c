@@ -126,13 +126,14 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
     if ((!mc->flag.endless) || 
         (mc->flag.endless && (mc->mode == MOT_RUN_SPEED_DOWN))) {   /* check step counter */
             
-        if (!(--mc->num_rest)) mc->mode = MOT_JOB_READY;
+        if (!(--mc->num_rest)) 
+            mc->mode = MOT_JOB_READY;
     }
     
     return latency;
 }
 /*! --------------------------------------------------------------------
- * @brief  used by run_A4988()
+ * @brief  used by driver thread run_A4988()
  */
 static int mot_run (struct _mot_ctl_ *mc)
 {
@@ -246,7 +247,7 @@ static int mot_run (struct _mot_ctl_ *mc)
             }
             break;
         case MOT_START_MD: {                                 
-                mc->mc_mp = mc->mc_mp->next;
+                mc->mc_mp = mc->mc_mp->next;       /* set the next motion-point in the struct _mot_ctl_ */
                 if (!mc->mc_mp) {
                     mc->mode = MOT_JOB_READY;                    
                 } else {                    
@@ -280,7 +281,7 @@ void *run_A4988 (void *data)
     printf ("-- <run_A4988> is started\n");
     
 #ifdef USE_HIGH_PRIORITY
-    struct sched_param sp = { .sched_priority = 95 };       /* priority > 95 you need permitted */       
+    struct sched_param sp = { .sched_priority = 95 };       /* priority > 95 you need permitted ??? */       
     if (sched_setscheduler(0, SCHED_FIFO, &sp) == -1) {     /* SCHED_FIFO  SCHED_RR   SCHED_OTHER  */
         perror("sched_setscheduler");
         return (NULL);
@@ -401,7 +402,7 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     mc->num_rest = 0;
     mc->current_stepcount = 0;
     
-    mc->steptime = 2000;                                        /* steptime in us. Default 1ms */
+    mc->steptime = 2000;                                        /* steptime in us. Default 2ms */
     mc->omega = calc_omega (mc->steps_per_turn, mc->steptime);
     mc->a_start = mc->a_stop = 0.0;                             /* speed-up, speed-down */
     
@@ -549,11 +550,20 @@ int mot_fast_stop (struct _mot_ctl_ *mc)
         
     return EXIT_SUCCESS;
 } 
+
+
 /*! --------------------------------------------------------------------
  * @brief   Engine start. The motor follows the motion diagram.
  */ 
 int mot_start_md (struct _motion_diagram_ *md)
 {
+    if (md) {
+        if (grep_md(md) != EXIT_SUCCESS) {      /* check md */
+            printf ("Data set not found\n");
+            return EXIT_FAILURE;
+        }
+    }
+    
     if (!md || !md->mc)
         return EXIT_FAILURE;
     
@@ -569,7 +579,7 @@ int mot_start_md (struct _motion_diagram_ *md)
     
     mot_enable (md->mc);
     md->mc->max_latency = 0;
-    md->mc->mc_mp = md->first_mp;
+    md->mc->mc_mp = md->first_mp;                   /* set first moition-point */
     md->mc->current_omega = md->first_mp->omega;
     gettimeofday (&md->mc->run_start, NULL);
     md->mc->mode = MOT_START_MD;
@@ -716,8 +726,18 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
  */
 extern int kill_md (struct _motion_diagram_ *md)
 {
+    if (md) {
+        if (grep_md(md) != EXIT_SUCCESS) 
+            return EXIT_FAILURE;
+    }
+    
     if (!md) 
         return EXIT_FAILURE;
+        
+    if (md->mc->mc_mp != NULL) {          /* Engine is running with this motion diagram */
+        printf ("kill failure\n");
+        return EXIT_FAILURE;
+    }
         
     kill_all_mp (md);
     
@@ -735,6 +755,16 @@ extern int kill_md (struct _motion_diagram_ *md)
  */
 extern int kill_all_md (void)
 {
+    struct _motion_diagram_ *md = first_md;
+    
+    while (md != NULL) {
+        if (md->mc->mode != MOT_IDLE) {
+            printf ("Can't delete motion-diagram. Engine is running\n");
+            return EXIT_FAILURE;
+        }
+        md = md->next;
+    }
+    
     while (first_md != NULL) 
         kill_md (first_md);
         
@@ -760,6 +790,20 @@ int show_mp (struct _move_point_ *mp)
              mp->a);
         
     return EXIT_SUCCESS;
+}
+/*! --------------------------------------------------------------------
+ * @brief   Checks whether a record exists.
+ */
+int grep_md (struct _motion_diagram_ *md)
+{
+    struct _motion_diagram_ *m = first_md;
+    
+    while (m) {
+        if (m == md) 
+            return EXIT_SUCCESS;
+    }
+    
+    return EXIT_FAILURE;
 }
 /*! --------------------------------------------------------------------
  * @brief   show diagram points

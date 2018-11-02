@@ -13,7 +13,7 @@ enum DIRECTION {
     MOT_CCW = 1
 };
 
-enum MOT_STATE {
+enum MOT_STATE {                /* see: function mot_run() */
     MOT_IDLE = 0x00,
     MOT_START_RUN = 0x01,    
     MOT_SPEED_UP = 0x02,
@@ -158,12 +158,13 @@ extern double calc_steps_for_step_down (struct _mot_ctl_ *mc);
 extern struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc);
 extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
+extern int grep_md (struct _motion_diagram_ *md);                   /* Checks whether a record exists. */
 extern int show_md (struct _motion_diagram_ *md);                   /* show diagram point */
 
 extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
 extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */
 
-extern struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t);       /* add an item to the end of the list */
+extern struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t);          /* add an item to the end of the list */
 extern struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t);
 
 extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */

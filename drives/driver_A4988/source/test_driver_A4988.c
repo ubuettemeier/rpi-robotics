@@ -66,12 +66,12 @@ int main(int argc, char *argv[])
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 
     md = new_md(m1);                     /* new motion diagram for motor 1 */                        
-    add_mp_with_omega (md, 10.0, 0.5);                        
+    add_mp_with_omega (md, 10.0, 0.5);   /* the first moition-point: omega=10 s⁻1; t=0.5s */                     
     add_mp_with_omega (md, 10.0, 2);                        
     add_mp_with_omega (md, 0, 3);                        
     add_mp_with_omega (md, -10.0, 4);
     add_mp_with_omega (md, -10.0, 5);
-    add_mp_with_omega (md, 0.0, 5.5);
+    add_mp_with_omega (md, 0.0, 7.5);
 
     help();
     init_check_keypressed();                           /* init key-touch control */
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
                 case 's':
                     mot_stop (m1);
                     break;
-                case 'f':
+                case 'f':                   /* motor fast stop */
                     mot_fast_stop (m1);
                     break;
                 case 'r':                   /* repeat motor sequence */
@@ -124,6 +124,9 @@ int main(int argc, char *argv[])
                     break;                    
                 case 'g':              /* draw motion diagram with gnuplot */
                     gnuplot_md (md);                        
+                    break;
+                case 'k':
+                    kill_all_md();
                     break;
             }
         }           
