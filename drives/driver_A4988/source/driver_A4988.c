@@ -928,6 +928,9 @@ int gnuplot_md (struct _motion_diagram_ *md)
     fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega * 1.2, md->max_omega * 1.2);    
     fprintf (gp, "set xrange[-0.5:%4.3f]\n", md->max_t * 1.2);
     
+    fprintf (gp, "set label 1 \"CW\" at graph -0.05, 1.05, 0 left\n");
+    fprintf (gp, "set label 2 \"CCW\" at graph -0.05, -0.05, 0 left\n");
+    
     fprintf (gp, "plot \"graph.txt\" with linespoints lw 3 lc rgb \"#0000FF\"  pt 7 ps 3\n");
             
     pclose (gp);

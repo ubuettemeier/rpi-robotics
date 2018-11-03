@@ -64,13 +64,13 @@ int main(int argc, char *argv[])
     double speed_rpm[3] = {150.0, 53.5, 250.0};
     struct _motion_diagram_ *md = NULL;
     
-    init_mot_ctl ();   
+    init_mot_ctl ();
     show_usleep (1000000, 100000);       /* see: rpi_tools.h */
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 
-    md = new_md(m1);                     /* new motion diagram for motor 1 */                        
-    add_mp_with_omega (md, 10.0, 0.5);   /* the first moition-point: omega=10 s⁻1; t=0.5s */                     
+    md = new_md(m1);                     /* new motion diagram for motor 1 */
+    add_mp_with_omega (md, 10.0, 0.5);   /* the first moition-point: omega=10 s⁻1; t=0.5s */
     add_mp_with_omega (md, 10.0, 2);                        
     add_mp_with_omega (md, 0, 3);                        
     add_mp_with_omega (md, -10.0, 4);
@@ -140,7 +140,8 @@ int main(int argc, char *argv[])
                     gnuplot_md (md);                        
                     break;
                 case 'k':               /* test the kill function */
-                    kill_all_md();
+                    if (kill_all_md() == EXIT_SUCCESS)
+                        printf ("all diagram killed\n");
                     break;
             }
         }           
