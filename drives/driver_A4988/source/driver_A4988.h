@@ -132,7 +132,8 @@ extern int mot_setparam (struct _mot_ctl_ *mc,        /* mc = motor handle */
                           
 extern int mot_start (struct _mot_ctl_ *mc);
 extern int mot_stop (struct _mot_ctl_ *mc);
-extern int mot_fast_stop (struct _mot_ctl_ *mc);      /* Engine stopping without ramp. */
+extern int mot_fast_stop (struct _mot_ctl_ *mc);                 /* Engine stopping without ramp. */
+extern int mot_on_step (struct _mot_ctl_ *mc, uint8_t dir);     /* dir==0 CW, dir==1 CCW */
 
 extern int mot_start_md (struct _motion_diagram_ *md);                  /* Engine start. The motor follows the motion diagram. */
 

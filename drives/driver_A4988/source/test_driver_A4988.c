@@ -35,6 +35,10 @@ static void help()
     printf ("\n");
     printf ("h = this message\n");
     printf ("ESC = Exit\n");  
+    printf ("\n");  
+    printf ("x = one step CW\n");
+    printf ("y = one step CCW\n");
+    printf ("\n");  
     printf ("1 = start m1 CW 400 steps\n");  
     printf ("2 = start m1 CCW 400 steps\n"); 
     printf ("8 = new speed\n"); 
@@ -88,6 +92,12 @@ int main(int argc, char *argv[])
                 case 'h':
                     help();
                     break;
+                case 'x':
+                    mot_on_step (m1, MOT_CW);
+                    break;
+                case 'y':
+                    mot_on_step (m1, MOT_CCW);
+                    break;
                 case '1':
                 case '2':                  /* set motor sequence */
                     if (m1->mode == MOT_IDLE) {
@@ -129,7 +139,7 @@ int main(int argc, char *argv[])
                 case 'g':              /* draw motion diagram with gnuplot */
                     gnuplot_md (md);                        
                     break;
-                case 'k':
+                case 'k':               /* test the kill function */
                     kill_all_md();
                     break;
             }

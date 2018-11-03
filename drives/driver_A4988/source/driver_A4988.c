@@ -552,8 +552,25 @@ int mot_fast_stop (struct _mot_ctl_ *mc)
         
     return EXIT_SUCCESS;
 } 
-
-
+/*! --------------------------------------------------------------------
+ * @param   dir==0 CW, dir==1 CCW
+ */
+int mot_on_step (struct _mot_ctl_ *mc, uint8_t dir)
+{
+    if (!mc) 
+        return EXIT_FAILURE;
+        
+    if (mc->mode != MOT_IDLE) {
+        printf ("-- Can't step. Motor is not idle\n");
+        return EXIT_FAILURE;
+    }
+        
+    mot_enable (mc);
+    mot_set_dir (mc, dir);
+    mot_step (mc);
+        
+    return EXIT_SUCCESS;
+}
 /*! --------------------------------------------------------------------
  * @brief   Engine start. The motor follows the motion diagram.
  */ 
@@ -871,16 +888,20 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
 }
 /*! --------------------------------------------------------------------
  * @brief   display motion diagram with gnupolt
+ *           install gnuplot with: 
+ *           sudo apt-get install gnuplot gnuplot-x11 gnuplot-doc 
  */
 int gnuplot_md (struct _motion_diagram_ *md)
 {
     FILE *gp;    
     
     if (md) {
-        if (grep_md(md) != EXIT_SUCCESS) {
+        if (grep_md(md) != EXIT_SUCCESS) {              /* check parameter md */
             printf ("-- Can't find motion-diagram\n");
             return EXIT_FAILURE;
         }
+    } else {
+        return EXIT_FAILURE;
     }
     
     if (gnuplot_write_graph_data_file (md, "graph.txt") != EXIT_SUCCESS) {      /* write motion data to a file */
@@ -913,7 +934,8 @@ int gnuplot_md (struct _motion_diagram_ *md)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
- * @brief   add an item to the end of the list
+ * @brief  add an item to the end of the list
+ *          Attention: Zero crossing is not allowed.
  */
 struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
 {    
@@ -928,7 +950,7 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
         
     double omega = 2.0 * M_PI * Hz;
     if (((md->last_mp->omega > 0.0) && (omega < 0.0)) || 
-        ((md->last_mp->omega < 0.0) && (omega > 0.0))) {    /* zero passage */           
+        ((md->last_mp->omega < 0.0) && (omega > 0.0))) {    /* zero crossing */
             md->data_set_is_incorrect = 2;
             printf ("-- ERROR: zero passage \n");
             return (NULL);
@@ -950,7 +972,7 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     mp->owner->phi_all += mp->delta_phi;
     mp->phi = mp->owner->phi_all;
     
-    if (mp->omega > md->max_omega) 
+    if (mp->omega > md->max_omega)      
         md->max_omega = mp->omega;
     if (mp->omega < md->min_omega) 
         md->min_omega = mp->omega;
