@@ -322,7 +322,7 @@ int init_mot_ctl()
 {    
 #ifdef USE_GPIO
     if( wiringPiSetup() < 0) {
-        printf ("wiringPiSetup failed !\n");
+        printf ("-- wiringPiSetup failed !\n");
         return EXIT_FAILURE;
     } else printf ("-- wiringPi initialisiert\n");
 #endif
@@ -344,7 +344,7 @@ int init_mot_ctl()
         pthread_setaffinity_np(thread_A4988, sizeof(cpu_set_t), &go_core);		/* Assign a CPU core to the thread */
         for (i = 0; i < CPU_SETSIZE; i++)
             if (CPU_ISSET(i, &go_core))
-                printf("go() Thread CPU = CPU %d\n", i);
+                printf("-- thread run_A4988() -> CPU = CPU %d\n", i);
         sleep (1);
 #endif    
     }
@@ -439,6 +439,8 @@ int kill_mot (struct _mot_ctl_ *mc)
     if (mc == first_mc) first_mc = mc->next;
     if (mc == last_mc) last_mc = mc->prev;
     
+    clear_mc_in_md (mc);
+    
     free (mc);
     
     thread_state.mc_closed = 0;
@@ -504,12 +506,12 @@ int mot_start (struct _mot_ctl_ *mc)
         return EXIT_FAILURE;
 
     if (mc->num_steps < 0) {
-        printf ("parameter num_steps failed\n");
+        printf ("-- parameter num_steps failed\n");
         return (EXIT_FAILURE);
     }
     
     if (mc->mode != MOT_IDLE) {
-        printf ("Can't start motor\n");
+        printf ("-- Can't start motor\n");
         return EXIT_FAILURE;
     }
     
@@ -559,7 +561,7 @@ int mot_start_md (struct _motion_diagram_ *md)
 {
     if (md) {
         if (grep_md(md) != EXIT_SUCCESS) {      /* check md */
-            printf ("Data set not found\n");
+            printf ("-- Data set not found\n");
             return EXIT_FAILURE;
         }
     }
@@ -568,12 +570,12 @@ int mot_start_md (struct _motion_diagram_ *md)
         return EXIT_FAILURE;
     
     if (md->data_set_is_incorrect) {
-        printf ("Data set is incorrect. ERROR No.: %i\n", md->data_set_is_incorrect);
+        printf ("-- Data set is incorrect. ERROR No.: %i\n", md->data_set_is_incorrect);
         return EXIT_FAILURE;
     }    
     
     if (md->mc->mode != MOT_IDLE) {
-        printf ("Can't start motorprogram\n");
+        printf ("-- Can't start motor-program\n");
         return EXIT_FAILURE;
     }
     
@@ -733,10 +735,12 @@ extern int kill_md (struct _motion_diagram_ *md)
     
     if (!md) 
         return EXIT_FAILURE;
-        
-    if (md->mc->mc_mp != NULL) {          /* Engine is running with this motion diagram */
-        printf ("kill failure\n");
-        return EXIT_FAILURE;
+       
+    if (md->mc != NULL) {
+        if (md->mc->mc_mp != NULL) {          /* Engine is running with this motion diagram */
+            printf ("-- kill failure\n");
+            return EXIT_FAILURE;
+        }
     }
         
     kill_all_mp (md);
@@ -758,9 +762,11 @@ extern int kill_all_md (void)
     struct _motion_diagram_ *md = first_md;
     
     while (md != NULL) {
-        if (md->mc->mode != MOT_IDLE) {
-            printf ("Can't delete motion-diagram. Engine is running\n");
-            return EXIT_FAILURE;
+        if (md->mc != NULL) {
+            if (md->mc->mode != MOT_IDLE) {
+                printf ("-- Can't delete motion-diagram. Engine is running\n");
+                return EXIT_FAILURE;
+            }
         }
         md = md->next;
     }
@@ -823,6 +829,20 @@ int show_md (struct _motion_diagram_ *md)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
+ * @brief  Delete the motor pointer in the motion_diagram dataset.
+ *          Used by kill_mc()
+ */
+void clear_mc_in_md (struct _mot_ctl_ *mc)
+{
+    struct _motion_diagram_ *md = first_md;
+    
+    while (md != NULL) {
+        if (md->mc == mc) 
+            md->mc = NULL;
+        md = md->next;
+    }
+}
+/*! --------------------------------------------------------------------
  * æbrief   write motion data to a file
  */
 int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname)
@@ -831,7 +851,7 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
     char buf[256];
     
     if ((data = fopen (fname, "w+t")) == 0) {
-        printf ("Can't open %s\n", fname);
+        printf ("-- Can't open %s\n", fname);
         return EXIT_FAILURE;
     }
     
@@ -856,29 +876,38 @@ int gnuplot_md (struct _motion_diagram_ *md)
 {
     FILE *gp;    
     
+    if (md) {
+        if (grep_md(md) != EXIT_SUCCESS) {
+            printf ("-- Can't find motion-diagram\n");
+            return EXIT_FAILURE;
+        }
+    }
+    
     if (gnuplot_write_graph_data_file (md, "graph.txt") != EXIT_SUCCESS) {      /* write motion data to a file */
-        printf ("Can't write diagram data to graph.txt\n");
+        printf ("-- Can't write diagram data to graph.txt\n");
         return EXIT_FAILURE;
     }    
         
     if ((gp = popen("gnuplot -p" , "w")) == NULL) {
-        printf ("Can't open gnuplot\n");
+        printf ("-- Can't open gnuplot\n");
         return EXIT_FAILURE;
     }
         
     fprintf (gp, "reset\n");
     fprintf (gp, "set term x11\n");
+    
+    fprintf (gp, "set title \"motion diagram\" font \", 16\"\n");
 
-    fprintf (gp, "set xlabel %ct[s]%c\n", '"', '"');
+    fprintf (gp, "set xlabel \"t[s]\"\n");
     fprintf (gp, "set ylabel %comega[s^-1]%c\n", '"', '"');
     
-    fprintf (gp, "set xzeroaxis lt 2 lw 1 lc rgb %c#FF0000%c\n", '"', '"');
-    fprintf (gp, "set yzeroaxis lt 2 lw 1 lc rgb %c#FF0000%c\n", '"', '"');
+    fprintf (gp, "set xzeroaxis lt 2 lw 1 lc rgb \"#FF0000\"\n");
+    fprintf (gp, "set yzeroaxis lt 2 lw 1 lc rgb \"#FF0000\"\n");
     
     fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega * 1.2, md->max_omega * 1.2);    
     fprintf (gp, "set xrange[-0.5:%4.3f]\n", md->max_t * 1.2);
     
-    fprintf (gp, "plot %cgraph.txt%c with linespoints lw 3 lc rgb %c#0000FF%c  pt 7 ps 3\n", '"', '"', '"', '"');
+    fprintf (gp, "plot \"graph.txt\" with linespoints lw 3 lc rgb \"#0000FF\"  pt 7 ps 3\n");
             
     pclose (gp);
     return EXIT_SUCCESS;
@@ -893,7 +922,7 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
         
     if (t < md->last_mp->t) {                               /* negative time */
         md->data_set_is_incorrect = 1;
-        printf ("ERROR: negative time \n");
+        printf ("-- ERROR: negative time \n");
         return (NULL);
     }
         
@@ -901,7 +930,7 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     if (((md->last_mp->omega > 0.0) && (omega < 0.0)) || 
         ((md->last_mp->omega < 0.0) && (omega > 0.0))) {    /* zero passage */           
             md->data_set_is_incorrect = 2;
-            printf ("ERROR: zero passage \n");
+            printf ("-- ERROR: zero passage \n");
             return (NULL);
     }
         
@@ -957,8 +986,7 @@ int kill_mp (struct _move_point_ *mp)
     if (mp->prev != NULL) mp->prev->next = mp->next;    
     if (mp == mp->owner->first_mp) mp->owner->first_mp = mp->next;
     if (mp == mp->owner->last_mp) mp->owner->last_mp = mp->prev;
-    
-    
+        
     free (mp);    
         
     return EXIT_SUCCESS;

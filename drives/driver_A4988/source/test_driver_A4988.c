@@ -93,7 +93,8 @@ int main(int argc, char *argv[])
                     if (m1->mode == MOT_IDLE) {
                         mot_setparam (m1, (c == '1') ? MOT_CW : MOT_CCW, 400, 3*G, 5*G);
                         mot_start (m1);
-                    }
+                    } else 
+                        printf ("Can't start motor. Motor is running\n");
                     break;   
                 case '8':
                     sn = (sn < 2) ? sn+1 : 0;
@@ -107,7 +108,8 @@ int main(int argc, char *argv[])
                         mot_setparam (m1, MOT_CW, 0, 3*G, 5*G);
                         mot_set_rpm (m1, 200.0);
                         mot_start (m1);
-                    }
+                    } else 
+                        printf ("Can't start motor. Motor is running\n");
                     break;                   
                 case 's':
                     mot_stop (m1);
@@ -118,6 +120,8 @@ int main(int argc, char *argv[])
                 case 'r':                   /* repeat motor sequence */
                     if (m1->mode == MOT_IDLE) 
                         mot_start (m1);
+                    else 
+                        printf ("Can't start motor. Motor is running\n");
                     break;
                 case 't':                   /* test moition diagramm */                                                
                     mot_start_md (md);                                            

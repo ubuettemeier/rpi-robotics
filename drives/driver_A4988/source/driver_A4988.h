@@ -160,6 +160,7 @@ extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
 extern int grep_md (struct _motion_diagram_ *md);                   /* Checks whether a record exists. */
 extern int show_md (struct _motion_diagram_ *md);                   /* show diagram point */
+extern void clear_mc_in_md (struct _mot_ctl_ *mc);                   /* Delete the motor pointer in the motion_diagram dataset. Used by kill_mc */
 
 extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
 extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */
