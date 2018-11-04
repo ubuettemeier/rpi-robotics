@@ -69,14 +69,30 @@ int main(int argc, char *argv[])
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 
-    md = new_md(m1);                     /* new motion diagram for motor 1 */
-    add_mp_with_omega (md, 10.0, 0.5);   /* the first moition-point: omega=10 s⁻1; t=0.5s */
-    add_mp_with_omega (md, 10.0, 2);                        
-    add_mp_with_omega (md, 0, 3);                        
-    add_mp_with_omega (md, -10.0, 4);
-    add_mp_with_omega (md, -10.0, 5);
-    add_mp_with_omega (md, 0.0, 7.5);
+    #define USE_MOTION_PROFIL_2
 
+    md = new_md(m1);                     /* new motion diagram for motor 1 */
+    #ifdef USE_MOTION_PROFIL_1
+        add_mp_with_omega (md, 10.0, 0.5);   /* the first moition-point: omega=10 s⁻1; t=0.5s */
+        add_mp_with_omega (md, 10.0, 2);
+        add_mp_with_omega (md, 0, 3);
+        add_mp_with_omega (md, -10.0, 4);
+        add_mp_with_omega (md, -10.0, 5);
+        add_mp_with_omega (md, 0.0, 7.5);
+    #endif
+    
+    #ifdef USE_MOTION_PROFIL_2
+        add_mp (md, 1.0, 0.0);
+        add_mp (md, 1.0, 2.5);
+        add_mp (md, 0.5, 2.5);
+        add_mp (md, 0.5, 5.0);
+    #endif
+    
+    #ifdef USE_MOTION_PROFIL_3
+        add_mp (md, 0.5, 0.0);
+        add_mp (md, 0.5, 0.005);
+    #endif
+    
     help();
     init_check_keypressed();                           /* init key-touch control */
 

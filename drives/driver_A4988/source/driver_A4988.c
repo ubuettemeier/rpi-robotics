@@ -209,9 +209,8 @@ static int mot_run (struct _mot_ctl_ *mc)
             }
             break;
             
-        case MOT_RUN_MD: {
-                mc->mc_mp->current_step++;   
-                if (mc->mc_mp->current_step > mc->mc_mp->steps) {   /* end of MOT_RUN_MD */
+        case MOT_RUN_MD: {                
+                if (mc->mc_mp->current_step >= mc->mc_mp->steps) {   /* end of MOT_RUN_MD */
                     mc->mode = MOT_START_MD;                    
                 } else {                          
                     double t;
@@ -244,6 +243,7 @@ static int mot_run (struct _mot_ctl_ *mc)
                     gettimeofday (&mc->start, NULL);        
                     mc->mode = MOT_RUN_SPEED_MD;
                 }
+                mc->mc_mp->current_step++;
             }
             break;
         case MOT_START_MD: {                                 
@@ -598,6 +598,7 @@ int mot_start_md (struct _motion_diagram_ *md)
     
     mot_enable (md->mc);
     md->mc->max_latency = 0;
+    md->mc->current_stepcount = 0;
     md->mc->mc_mp = md->first_mp;                   /* set first moition-point */
     md->mc->current_omega = md->first_mp->omega;
     gettimeofday (&md->mc->run_start, NULL);
@@ -969,7 +970,7 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
     mp->a = (mp->delta_t > 0.0) ? mp->delta_omega / mp->delta_t : 0.0;    
     mp->delta_phi = (md->last_mp->omega + mp->omega) / 2.0 * mp->delta_t;
         
-    mp->steps = fabs(mp->delta_phi) / md->mc->phi_per_step;
+    mp->steps = round(fabs(mp->delta_phi) / md->mc->phi_per_step);    
         
     mp->owner = md;
     mp->owner->phi_all += mp->delta_phi;
@@ -979,7 +980,7 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
         md->max_omega = mp->omega;
     if (mp->omega < md->min_omega) 
         md->min_omega = mp->omega;
-    md->max_t = t;
+    if (t > md->max_t) md->max_t = t;
     
     mp->next = mp->prev = NULL;
     if (md->first_mp == NULL) {        
