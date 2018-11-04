@@ -166,8 +166,9 @@ extern void clear_mc_in_md (struct _mot_ctl_ *mc);                   /* Delete t
 extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
 extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */
 
-extern struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t);          /* add an item to the end of the list */
-extern struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t);
+extern struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t);          /* add an item to the end of the list */
+extern struct _move_point_ *add_mp_omega (struct _motion_diagram_ *md, double omega, double t);
+extern struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm, double t);
 
 extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */
 extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */

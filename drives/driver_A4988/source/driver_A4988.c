@@ -58,7 +58,7 @@ struct _thread_state_ thread_state = {
     .kill = 0
 };
 
-pthread_t thread_A4988 = NULL;                         /* glob thread handle */
+pthread_t thread_A4988 = 0;                             /* glob thread handle */
 struct _mot_ctl_ *first_mc = NULL, *last_mc = NULL;   /* motor control */
 uint8_t is_init = 0;
 
@@ -944,7 +944,7 @@ int gnuplot_md (struct _motion_diagram_ *md)
  * @brief  add an item to the end of the list
  *          Attention: Zero crossing is not allowed.
  */
-struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
+struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t)
 {    
     if (md == NULL)
         return NULL;
@@ -999,9 +999,16 @@ struct _move_point_ *add_mp (struct _motion_diagram_ *md, double Hz, double t)
 /*! --------------------------------------------------------------------
  * @brief   add an item to the end of the list
  */
-struct _move_point_ *add_mp_with_omega (struct _motion_diagram_ *md, double omega, double t)
+struct _move_point_ *add_mp_omega (struct _motion_diagram_ *md, double omega, double t)
 {
-    return add_mp (md, omega / 2.0 / M_PI, t);
+    return add_mp_Hz (md, omega / 2.0 / M_PI, t);
+}
+/*! --------------------------------------------------------------------
+ * @brief   add an item to the end of the list
+ */
+struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm, double t)
+{
+    return add_mp_Hz (md, rpm / 60.0, t);
 }
 /*! --------------------------------------------------------------------
  * @brief   delete move point in motion diagram
