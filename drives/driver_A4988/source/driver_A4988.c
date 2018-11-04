@@ -867,6 +867,7 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
 {
     FILE *data;
     char buf[256];
+    uint64_t sum_step = 0;
     
     if ((data = fopen (fname, "w+t")) == 0) {
         printf ("-- Can't open %s\n", fname);
@@ -875,10 +876,11 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
     
     struct _move_point_ *mp = md->first_mp;
     
-    sprintf (buf, "# x=t[s]   y=omega[s^-1]\n");    
+    sprintf (buf, "# x=t[s]   y=omega[s^-1]   steps\n");    
     fwrite (buf, strlen(buf), 1, data);
-    while (mp) {                    
-        sprintf (buf, "%3.4f  %3.4f\n", mp->t, mp->omega);
+    while (mp) {          
+        sum_step += mp->steps;
+        sprintf (buf, "%3.4f  %3.4f   %llu-Steps\n", mp->t, mp->omega/(2.0*M_PI), sum_step);
         fwrite (buf, strlen(buf), 1, data);
         
         mp = mp->next;
@@ -921,18 +923,19 @@ int gnuplot_md (struct _motion_diagram_ *md)
     fprintf (gp, "set title \"motion diagram\" font \", 16\"\n");
 
     fprintf (gp, "set xlabel \"t[s]\"\n");
-    fprintf (gp, "set ylabel %comega[s^-1]%c\n", '"', '"');
+    fprintf (gp, "set ylabel \"f[s^-1]\"\n");
     
     fprintf (gp, "set xzeroaxis lt 2 lw 1 lc rgb \"#FF0000\"\n");
     fprintf (gp, "set yzeroaxis lt 2 lw 1 lc rgb \"#FF0000\"\n");
     
-    fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega * 1.2, md->max_omega * 1.2);    
+    fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega/(2.0*M_PI) * 1.2, md->max_omega/(2.0*M_PI) * 1.2);    
     fprintf (gp, "set xrange[-0.5:%4.3f]\n", md->max_t * 1.2);
     
     fprintf (gp, "set label 1 \"CW\" at graph -0.05, 1.05, 0 left\n");
     fprintf (gp, "set label 2 \"CCW\" at graph -0.05, -0.05, 0 left\n");
-    
-    fprintf (gp, "plot \"graph.txt\" with linespoints lw 3 lc rgb \"#0000FF\"  pt 7 ps 3\n");
+        
+    fprintf (gp, "plot \"graph.txt\" w linespoints lw 3 lc rgb \"#0000FF\"  pt 7 ps 3, \
+                  '' w labels left offset 2.0, 1.0 notitle\n");
             
     pclose (gp);
     return EXIT_SUCCESS;

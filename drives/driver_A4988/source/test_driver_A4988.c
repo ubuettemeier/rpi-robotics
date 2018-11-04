@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 
-    #define USE_MOTION_PROFIL_2
+    #define USE_MOTION_PROFIL_1
 
     md = new_md(m1);                     /* new motion diagram for motor 1 */
     #ifdef USE_MOTION_PROFIL_1
@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
     #endif
     
     #ifdef USE_MOTION_PROFIL_3
-        add_mp (md, 0.5, 0.0);
-        add_mp (md, 0.5, 0.005);
+        add_mp (md, -0.5, 0.0);
+        add_mp (md, -0.5, 0.005);
     #endif
     
     help();
