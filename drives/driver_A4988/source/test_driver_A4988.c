@@ -50,6 +50,7 @@ static void help()
     printf ("r = repeat motor sequence\n");
     printf ("\n");
     printf ("t = test motion diagram\n");
+    printf ("c = read motion diagram from file <curve_1.dat>\n");
     printf ("g = draw motion diagram with gnuplot\n");
 }
 /*! --------------------------------------------------------------------
@@ -58,7 +59,7 @@ static void help()
 int main(int argc, char *argv[])
 {
     char c;
-    int taste = 0; 
+    int key = 0; 
     uint8_t ende = 0;   
     int sn = 0;
     double speed_rpm[3] = {150.0, 53.5, 250.0};
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 
-    #define USE_MOTION_PROFIL_4
+    #define USE_MOTION_PROFIL_1
 
     md = new_md(m1);                     /* new motion diagram for motor 1 */
     #ifdef USE_MOTION_PROFIL_1
@@ -99,27 +100,26 @@ int main(int argc, char *argv[])
         add_mp_rpm (md, 120, 4);
         add_mp_rpm (md, 50, 5);
     #endif
-        
-    
+            
     help();
-    init_check_keypressed();                           /* init key-touch control */
+    init_check_keypressed();                            /* init key-touch control */
 
     while (!ende) {        
-        if ((taste = check_keypressed(&c)) > 0) {       /* look for keypressed */        
+        if ((key = check_keypressed(&c)) > 0) {         /* look for keypressed */        
             switch ( c ) {
                 case 27:                                /* quit by ESC */                
                     kill_all_mot ();                    /* make motors disenabled */
-                    thread_state.kill = 1;
-                    while (!thread_state.run); 
+                    thread_state.kill = 1;              /* set terminat flag */
+                    while (!thread_state.run);          /* wait for thread ending */
                     ende = 1;
                     break;
-                case 'h':
+                case 'h':                   /* help */
                     help();
                     break;
-                case 'x':
+                case 'x':                   /* one step CW */
                     mot_on_step (m1, MOT_CW);
                     break;
-                case 'y':
+                case 'y':                   /* one step CCW */
                     mot_on_step (m1, MOT_CCW);
                     break;
                 case '1':
@@ -163,9 +163,18 @@ int main(int argc, char *argv[])
                 case 'g':              /* draw motion diagram with gnuplot */
                     gnuplot_md (md);                        
                     break;
+                case 'c':
+                    if ((md = new_md_from_file (m1, "curve_1.dat", RPM)) == NULL)
+                        printf ("ERROR\n");
+                    else {                        
+                        printf ("data set has %i motion points\n", count_mp(md));
+                    }
+                    break;
                 case 'k':               /* test the kill function */
-                    if (kill_all_md() == EXIT_SUCCESS)
+                    if (kill_all_md() == EXIT_SUCCESS) {
+                        md = NULL;
                         printf ("all diagram killed\n");
+                    }
                     break;
             }
         }           

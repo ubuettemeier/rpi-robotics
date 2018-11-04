@@ -8,6 +8,12 @@
 #include <stdint.h>
 #include <sys/time.h>
 
+enum SPEEDFORMAT {
+    OMEGA = 0,          /* rad/s */
+    FREQ = 1,           /* s⁻1 */
+    RPM = 2             /* min⁻1 */
+};
+
 enum DIRECTION {
     MOT_CW = 0,
     MOT_CCW = 1
@@ -157,15 +163,15 @@ extern double calc_steps_for_step_down (struct _mot_ctl_ *mc);
  * @brief   motion diagram
  */
 extern struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc);
+extern struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fname, uint8_t speedformat);    /* speedformat see: enum SPEEDFORMAT */
 extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
-extern int grep_md (struct _motion_diagram_ *md);                   /* Checks whether a record exists. */
+extern int count_md (void);
+extern int check_md_pointer (struct _motion_diagram_ *md);          /* Checks whether a record exists. */
 extern int show_md (struct _motion_diagram_ *md);                   /* show diagram point */
 extern void clear_mc_in_md (struct _mot_ctl_ *mc);                   /* Delete the motor pointer in the motion_diagram dataset. Used by kill_mc */
 
-extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
-extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */
-
+/* ---- motion points ---- */
 extern struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t);          /* add an item to the end of the list */
 extern struct _move_point_ *add_mp_omega (struct _motion_diagram_ *md, double omega, double t);
 extern struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm, double t);
@@ -175,4 +181,6 @@ extern int kill_all_mp (struct _motion_diagram_ *md);                           
 extern int count_mp (struct _motion_diagram_ *md);
 extern int show_mp (struct _move_point_ *mp);
 
-
+/* ---- draw motion digram ---- */
+extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
+extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */

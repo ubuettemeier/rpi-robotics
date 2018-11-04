@@ -277,6 +277,7 @@ void *run_A4988 (void *data)
 {
     struct _mot_ctl_ *mc;
 
+    thread_state.kill = 0;
     thread_state.run = 1;
     printf ("-- <run_A4988> is started\n");
     
@@ -291,7 +292,7 @@ void *run_A4988 (void *data)
     
     uint8_t all_mot_idle;
     
-    while (!thread_state.kill) {
+    while (!thread_state.kill) {                /* thread main loop */
         all_mot_idle = 1;
         if (!thread_state.mc_closed) {            
             mc = first_mc;
@@ -304,9 +305,8 @@ void *run_A4988 (void *data)
             }
         }
         
-        if (all_mot_idle) {
+        if (all_mot_idle) 
             usleep (1000); 
-        }
     }
     printf ("-- <run_A4988> is stoped\n");    
     thread_state.run = 0;
@@ -577,7 +577,7 @@ int mot_on_step (struct _mot_ctl_ *mc, uint8_t dir)
 int mot_start_md (struct _motion_diagram_ *md)
 {
     if (md) {
-        if (grep_md(md) != EXIT_SUCCESS) {      /* check md */
+        if (check_md_pointer(md) != EXIT_SUCCESS) {      /* check md */
             printf ("-- Data set not found\n");
             return EXIT_FAILURE;
         }
@@ -742,12 +742,44 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
     return md;
 }
 /*! --------------------------------------------------------------------
+ * @param   speedformat = [speed, FREQ, RPM]; see: enum SPEEDFORMAT
+ */
+struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fname, uint8_t speedformat)
+{
+    FILE *f;
+    struct _motion_diagram_ *md = NULL;
+    float_t speed, t;
+    
+    if ((f = fopen (fname, "r+t")) == NULL) {
+        printf ("-- File <%s> not found\n", fname);
+        return NULL;
+    }
+    
+    md = new_md (mc);
+    while (fscanf (f, "%f %f\n", &speed, &t) != EOF) {    
+        switch (speedformat) {
+            case OMEGA:
+                add_mp_omega (md, speed, t);
+                break;
+            case FREQ:
+                add_mp_Hz (md, speed, t);
+                break;
+            case RPM:
+                add_mp_rpm (md, speed, t);
+                break;
+        }
+    }
+    fclose (f);
+    
+    return md;
+}
+/*! --------------------------------------------------------------------
  * 
  */
 extern int kill_md (struct _motion_diagram_ *md)
 {
     if (md) {
-        if (grep_md(md) != EXIT_SUCCESS) 
+        if (check_md_pointer(md) != EXIT_SUCCESS) 
             return EXIT_FAILURE;
     }
     
@@ -795,6 +827,20 @@ extern int kill_all_md (void)
     return EXIT_SUCCESS;
 }
 /*! --------------------------------------------------------------------
+ * 
+ */
+int count_md ()
+{
+    struct _motion_diagram_ *md = first_md;
+    int n = 0;
+    
+    while (md != NULL) {
+        n++;
+        md = md->next;
+    }
+    return n;
+}
+/*! --------------------------------------------------------------------
  * @brief   show diagram point
  */
 int show_mp (struct _move_point_ *mp)
@@ -818,13 +864,14 @@ int show_mp (struct _move_point_ *mp)
 /*! --------------------------------------------------------------------
  * @brief   Checks whether a record exists.
  */
-int grep_md (struct _motion_diagram_ *md)
+int check_md_pointer (struct _motion_diagram_ *md)
 {
     struct _motion_diagram_ *m = first_md;
     
     while (m) {
         if (m == md) 
             return EXIT_SUCCESS;
+        m = m->next;
     }
     
     return EXIT_FAILURE;
@@ -897,9 +944,9 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
 int gnuplot_md (struct _motion_diagram_ *md)
 {
     FILE *gp;    
-    
-    if (md) {
-        if (grep_md(md) != EXIT_SUCCESS) {              /* check parameter md */
+        
+    if (md) {        
+        if (check_md_pointer(md) != EXIT_SUCCESS) {              /* check parameter md */
             printf ("-- Can't find motion-diagram\n");
             return EXIT_FAILURE;
         }
@@ -907,6 +954,7 @@ int gnuplot_md (struct _motion_diagram_ *md)
         return EXIT_FAILURE;
     }
     
+        
     if (gnuplot_write_graph_data_file (md, "graph.txt") != EXIT_SUCCESS) {      /* write motion data to a file */
         printf ("-- Can't write diagram data to graph.txt\n");
         return EXIT_FAILURE;
