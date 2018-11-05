@@ -5,7 +5,7 @@ The corresponding pins are SDA.1=Pin 3, SCL.1=Pin 5.
 
 The PCF8574 is an 8-port I/O expander I2C chip.
 Each of the eight I/Os can be independently used as an input or output. 
-To setup an I/O as an input, you have to write a 1 to the corresponding output.
+To set up an I/O port as input, a 1 must be written into the corresponding port.
 
 script's
 - source/edit.sh => opens the source files with geany
@@ -19,7 +19,7 @@ Die ensprechenden Pin's sind SDA.1=Pin 3, SCL.1=Pin 5.
 
 Der PCF8574 ist ein 8-Port I/O Expander I2C Chip.
 Jede der acht I/Os kann unabhängig voneinander als Eingang oder Ausgang verwendet werden. 
-Um eine I/O als Eingang einzurichten, müssen Sie eine 1 in den entsprechenden Ausgang schreiben.
+Um einen I/O Port als Eingang einzurichten, muss eine 1 in den entsprechenden Port geschrieben werden.
 
 script's
 - source/edit.sh => öffnet die Source Files mit geany

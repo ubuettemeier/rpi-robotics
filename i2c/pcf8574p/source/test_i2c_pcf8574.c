@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         abort_by_error ("pcf8574 failed", __func__);
         
     if (i2c_smbus_write_byte (device, config_mask) != 0)    /* write config mask */
-        printf ("write ERROR\n");
+        printf ("-- write ERROR\n");
 
     init_check_keypressed();                            /* init key-touch control */        
     help();
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
             foo = i2c_smbus_read_byte (device);
             if (foo < 0) 
-                printf ("read ERROR\n");
+                printf ("-- read ERROR\n");
             else 
                 printf ("data = 0x%2X\n", (uint8_t)foo & config_mask);
         }
