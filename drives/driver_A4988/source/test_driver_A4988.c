@@ -42,7 +42,7 @@ static void help()
     printf ("1 = start m1 CW 400 steps\n");  
     printf ("2 = start m1 CCW 400 steps\n"); 
     printf ("8 = new speed\n"); 
-    printf ("9 = Motor disenable\n");
+    printf ("9 = toggle Motor disenable/enable\n");
     printf ("\n");  
     printf ("e = start m1 CW endless steps\n");  
     printf ("s = Motor STOP\n"); 
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 
-    #define USE_MOTION_PROFIL_1
+    #define USE_MOTION_PROFIL_5
 
     md = new_md(m1);                     /* new motion diagram for motor 1 */
     #ifdef USE_MOTION_PROFIL_1
@@ -101,9 +101,18 @@ int main(int argc, char *argv[])
         add_mp_rpm (md, 50, 5);
     #endif
             
+    #ifdef USE_MOTION_PROFIL_5
+        add_mp_steps (md, 2.0, 300);
+        add_mp_steps (md, 2.0, 800);
+        add_mp_steps (md, 0.0, 1200);
+        add_mp_steps (md, -1.5, 1200);
+        add_mp_steps (md, -2.0, 1600);
+        add_mp_steps (md, 0.0, 1800);
+    #endif
+            
     help();
     init_check_keypressed();                            /* init key-touch control */
-
+    show_md (md);
     while (!ende) {        
         if ((key = check_keypressed(&c)) > 0) {         /* look for keypressed */        
             switch ( c ) {
@@ -135,7 +144,10 @@ int main(int argc, char *argv[])
                     mot_set_rpm (m1, speed_rpm[sn]);                                      
                     break;
                 case '9':
-                    mot_disenable (m1);
+                    if (m1->flag.enable == 1) 
+                        mot_enable (m1);
+                    else 
+                        mot_disenable (m1);                        
                     break;                
                 case 'e':                   /* set endless motor sequence (steps = 0) */
                     if (m1->mode == MOT_IDLE) {

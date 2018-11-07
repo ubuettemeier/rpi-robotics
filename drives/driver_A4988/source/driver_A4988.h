@@ -93,6 +93,7 @@ struct _move_point_ {
     double phi;
     uint64_t steps;
     uint64_t current_step;
+    uint64_t sum_steps;
     
     double delta_omega;     /* omega - prev->omega */
     double delta_t;         /* t - prev->t */
@@ -175,6 +176,8 @@ extern void clear_mc_in_md (struct _mot_ctl_ *mc);                   /* Delete t
 extern struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t);          /* add an item to the end of the list */
 extern struct _move_point_ *add_mp_omega (struct _motion_diagram_ *md, double omega, double t);
 extern struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm, double t);
+
+extern struct _move_point_ *add_mp_steps (struct _motion_diagram_ *md, double Hz, double steps);
 
 extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */
 extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */

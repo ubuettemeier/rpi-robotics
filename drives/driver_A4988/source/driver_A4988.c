@@ -717,7 +717,7 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
     mp->omega = mp->t = mp->delta_phi = 0.0;        /* the first move point with t=0 */
     mp->a = 0.0;
     mp->delta_omega = mp->delta_t = mp->delta_phi = 0.0;
-    mp->steps = 0;
+    mp->steps = mp->sum_steps = 0;
     mp->owner = md;
 
     mp->next = mp->prev = NULL;
@@ -851,12 +851,13 @@ int show_mp (struct _move_point_ *mp)
     if (mp->prev) printf ("prev->omega_0=%4.3f  ", mp->prev->omega);
     else printf ("omega_0=NIL     ");
     
-    printf ("omega=%4.3f  delta_omega=%4.3f  delta_t=%2.4f  delta_phi = %2.3f  steps=%llu  a=%4.3f\n", 
+    printf ("omega=%4.3f  delta_omega=%4.3f  delta_t=%2.4f  delta_phi = %2.3f  steps=%llu  sum_steps=%llu  a=%4.3f\n", 
              mp->omega,
              mp->delta_omega, 
              mp->delta_t,              
              mp->delta_phi,
              mp->steps,
+             mp->sum_steps,
              mp->a);
         
     return EXIT_SUCCESS;
@@ -1021,7 +1022,7 @@ struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t
     mp->a = (mp->delta_t > 0.0) ? mp->delta_omega / mp->delta_t : 0.0;    
     mp->delta_phi = (md->last_mp->omega + mp->omega) / 2.0 * mp->delta_t;
         
-    mp->steps = round(fabs(mp->delta_phi) / md->mc->phi_per_step);    
+    mp->steps = round(fabs(mp->delta_phi) / md->mc->phi_per_step);      
         
     mp->owner = md;
     mp->owner->phi_all += mp->delta_phi;
@@ -1042,6 +1043,8 @@ struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t
         md->last_mp = mp;       
     }
     
+    mp->sum_steps = mp->prev->sum_steps + mp->steps;
+    
     return mp;
 }
 /*! --------------------------------------------------------------------
@@ -1057,6 +1060,27 @@ struct _move_point_ *add_mp_omega (struct _motion_diagram_ *md, double omega, do
 struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm, double t)
 {
     return add_mp_Hz (md, rpm / 60.0, t);
+}
+
+struct _move_point_ *add_mp_steps (struct _motion_diagram_ *md, double Hz, double steps)
+{
+    if (md == NULL)
+        return NULL;
+        
+    double phi = md->mc->phi_per_step * (steps - md->last_mp->sum_steps);
+    double omega = 2.0*M_PI*Hz;
+    double sum_omega = md->last_mp->omega + omega;
+    double t = (sum_omega == 0.0) ? 0.0 : fabs(2.0 * phi / sum_omega);
+    printf ("%f %f\n", omega, t);
+    t += md->last_mp->t;
+    
+    if (t < md->last_mp->t) {                               /* negative time */
+        md->data_set_is_incorrect = 1;
+        printf ("-- ERROR: negative time \n");
+        return (NULL);
+    }
+    
+    return add_mp_omega (md, omega, t);
 }
 /*! --------------------------------------------------------------------
  * @brief   delete move point in motion diagram
