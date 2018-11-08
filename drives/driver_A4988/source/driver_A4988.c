@@ -5,6 +5,7 @@
  *  @todo    insert error flags
  *              step error
  *              latency error
+ *            Solve problem zero crossing in func add_mp_xxx()
  * 
  *  @example   
  *      #include <stdio.h>
@@ -708,6 +709,7 @@ double calc_steps_for_step_down (struct _mot_ctl_ *mc)
 }
 /*! --------------------------------------------------------------------
  * @brief   motion diagram
+ *          a new diagram is created
  */
 struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
 {
@@ -742,8 +744,14 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
     return md;
 }
 /*! --------------------------------------------------------------------
- * @param   speedformat = [speed, FREQ, RPM]; see: enum SPEEDFORMAT
- */
+ * @brief   a new motion diagram is created from file
+ * @param   speedformat = [speed, FREQ, RPM]; see: enum SPEEDFORMAT 
+ * @example     file (RPM Format / Line 1:  180 1/min  1,5s):
+ *                  180  1.5
+ *                  240  3
+ *                  50   5.5
+ * @param   if speedformat == STEP the file format is FREQ and STEPS
+ */ 
 struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fname, uint8_t speedformat)
 {
     FILE *f;
@@ -759,13 +767,16 @@ struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fna
     while (fscanf (f, "%f %f\n", &speed, &t) != EOF) {    
         switch (speedformat) {
             case OMEGA:
-                add_mp_omega (md, speed, t);
+                add_mp_omega (md, speed, t);    /* file format =  RPM[1/rad] and t[s] */
                 break;
             case FREQ:
-                add_mp_Hz (md, speed, t);
+                add_mp_Hz (md, speed, t);       /* file format =  RPM[1/s] and t[s] */
                 break;
             case RPM:
-                add_mp_rpm (md, speed, t);
+                add_mp_rpm (md, speed, t);      /* file format =  RPM[1/min] and t[s] */
+                break;
+            case STEP:
+                add_mp_steps (md, speed, t);    /* file format =  FREQ[1/s] and STEPS */
                 break;
         }
     }
@@ -1071,7 +1082,6 @@ struct _move_point_ *add_mp_steps (struct _motion_diagram_ *md, double Hz, doubl
     double omega = 2.0*M_PI*Hz;
     double sum_omega = md->last_mp->omega + omega;
     double t = (sum_omega == 0.0) ? 0.0 : fabs(2.0 * phi / sum_omega);
-    printf ("%f %f\n", omega, t);
     t += md->last_mp->t;
     
     if (t < md->last_mp->t) {                               /* negative time */

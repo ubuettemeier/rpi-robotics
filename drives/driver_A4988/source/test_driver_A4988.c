@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
     help();
     init_check_keypressed();                            /* init key-touch control */
     show_md (md);
+    
     while (!ende) {        
         if ((key = check_keypressed(&c)) > 0) {         /* look for keypressed */        
             switch ( c ) {

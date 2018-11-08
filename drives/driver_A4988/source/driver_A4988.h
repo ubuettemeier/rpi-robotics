@@ -11,7 +11,8 @@
 enum SPEEDFORMAT {
     OMEGA = 0,          /* rad/s */
     FREQ = 1,           /* s⁻1 */
-    RPM = 2             /* min⁻1 */
+    RPM = 2,            /* min⁻1 */
+    STEP = 3
 };
 
 enum DIRECTION {
@@ -86,6 +87,18 @@ extern struct _mot_ctl_ *first_mc, *last_mc;
 /*! --------------------------------------------------------------------
  * Motion Diagram
  */
+struct _motion_diagram_ {
+    struct _mot_ctl_ *mc;                       /* motor-pointer */
+    double phi_all;
+    uint8_t data_set_is_incorrect;               /* default = 0. See: add_mp() */
+    double max_omega, min_omega;
+    double max_t;
+    struct _move_point_ *first_mp, *last_mp;    /* first and last move point of motion diagramm */
+    struct _motion_diagram_ *next, *prev;
+};
+
+extern struct _motion_diagram_ *first_md, *last_md;
+
 struct _move_point_ {
     double omega;           /* angle-speed[rad/s] */
     double t;               /* [s] t >=  prev->t */
@@ -102,19 +115,6 @@ struct _move_point_ {
     struct _motion_diagram_ *owner;
     struct _move_point_ *next, *prev;
 };
-
-struct _motion_diagram_ {
-    struct _mot_ctl_ *mc;                       /* motor-pointer */
-    double phi_all;
-    uint8_t data_set_is_incorrect;               /* default = 0. See: add_mp() */
-    double max_omega, min_omega;
-    double max_t;
-    struct _move_point_ *first_mp, *last_mp;    /* first and last move point of motion diagramm */
-    struct _motion_diagram_ *next, *prev;
-};
-
-extern struct _motion_diagram_ *first_md, *last_md;
-
 /*! --------------------------------------------------------------------
  * 
  */
@@ -163,7 +163,7 @@ extern double calc_steps_for_step_down (struct _mot_ctl_ *mc);
 /*! --------------------------------------------------------------------
  * @brief   motion diagram
  */
-extern struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc);
+extern struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc);      /* A new diagram is created. */
 extern struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fname, uint8_t speedformat);    /* speedformat see: enum SPEEDFORMAT */
 extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
@@ -184,6 +184,6 @@ extern int kill_all_mp (struct _motion_diagram_ *md);                           
 extern int count_mp (struct _motion_diagram_ *md);
 extern int show_mp (struct _move_point_ *mp);
 
-/* ---- draw motion digram ---- */
+/* ---- draw motion diagram ---- */
 extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */
 extern int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fname);  /* write motion data to a file */
