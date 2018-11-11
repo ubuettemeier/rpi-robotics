@@ -1,8 +1,16 @@
 
 CC = gcc
 
+target = bmc
+# target = amd64
+
 CFLAGS = -Wall -c -O0 -DNDEBUG
-LDFLAGS = -lwiringPi -lpthread -lm -lrt
+
+ifeq	($(target),bmc)
+	LDFLAGS = -lwiringPi -lpthread -lm -lrt
+else
+	LDFLAGS = -lpthread -lm -lrt
+endif
 
 FILENAME = test_driver_A4988
 

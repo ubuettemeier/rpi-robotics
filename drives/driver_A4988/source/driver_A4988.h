@@ -36,7 +36,7 @@ enum MOT_STATE {                /* see: function mot_run() */
     MOT_JOB_READY = 0x80
 };
 
-struct _thread_state_ {         /* thread state */
+struct _thread_state_ {         /* thread state => see: void *run_A4988() */
     unsigned run: 1;
     unsigned mc_closed: 1;
     unsigned kill: 1;
@@ -61,12 +61,13 @@ struct _mot_ctl_ {             /* motor control */
     uint8_t mode;               /* used in mot_run function. see: enum MOT_STATE */
     uint32_t steps_per_turn;    /* steps per revolution */
     
-    int64_t max_latency;        
+    uint64_t max_latency;        
     int64_t num_steps;          /* num_step < 0 parameter failed, num_step == 0 the motor runs endless */
     uint64_t num_rest;
     uint64_t current_stepcount; /* Current number of steps */
+    int64_t real_stepcount;     /* if CW inc(), if CCW dec() */
 
-    int64_t runtime;            /* full running time in us */
+    uint64_t runtime;           /* full running time in us */
     
     uint32_t steptime;          /* steptime in us. Default 2000 us */ 
     uint32_t current_steptime;
@@ -128,6 +129,8 @@ extern struct _mot_ctl_ *new_mot (uint8_t pin_enable,   /* create dynamic memory
 extern int kill_mot (struct _mot_ctl_ *mc);
 extern int kill_all_mot (void);
 extern int count_mot (void);
+extern int check_mc_pointer (struct _mot_ctl_ *mc);
+extern void show_mot_ctl (struct _mot_ctl_ *mc);
 
 extern void mot_initpins (struct _mot_ctl_ *mc);        /* configures motor gpio  */
 
@@ -169,7 +172,7 @@ extern int kill_md (struct _motion_diagram_ *md);
 extern int kill_all_md (void);
 extern int count_md (void);
 extern int check_md_pointer (struct _motion_diagram_ *md);          /* Checks whether a record exists. */
-extern int show_md (struct _motion_diagram_ *md);                   /* show diagram point */
+extern int show_md (struct _motion_diagram_ *md);                   /* Terminal output. Show all point's */
 extern void clear_mc_in_md (struct _mot_ctl_ *mc);                   /* Delete the motor pointer in the motion_diagram dataset. Used by kill_mc */
 
 /* ---- motion points ---- */
@@ -179,10 +182,10 @@ extern struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm,
 
 extern struct _move_point_ *add_mp_steps (struct _motion_diagram_ *md, double Hz, double steps);
 
-extern int kill_mp (struct _move_point_ *mp);                                                       /* delete move point in motion diagram */
-extern int kill_all_mp (struct _motion_diagram_ *md);                                               /* delete all move points off motion diagram */
+extern int kill_mp (struct _move_point_ *mp);                        /* delete move point in motion diagram */
+extern int kill_all_mp (struct _motion_diagram_ *md);                /* delete all move points off motion diagram */
 extern int count_mp (struct _motion_diagram_ *md);
-extern int show_mp (struct _move_point_ *mp);
+extern int show_mp (struct _move_point_ *mp);                        /* terminal output */
 
 /* ---- draw motion diagram ---- */
 extern int gnuplot_md (struct _motion_diagram_ *md);                /* display motion diagram with gnupolt */

@@ -5,7 +5,6 @@
  *  @todo    insert error flags
  *              step error
  *              latency error
- *            Solve problem zero crossing in func add_mp_xxx()
  * 
  *  @example   
  *      #include <stdio.h>
@@ -105,6 +104,11 @@ static int mot_step (struct _mot_ctl_ *mc)
         asm ("nop");
         digitalWrite (mc->mp.step_pin, 0);
 #endif
+        if (mc->flag.dir)
+            mc->real_stepcount--;
+        else 
+            mc->real_stepcount++;
+            
     } else return (EXIT_FAILURE);
     
     return EXIT_SUCCESS;
@@ -112,14 +116,14 @@ static int mot_step (struct _mot_ctl_ *mc)
 /*! --------------------------------------------------------------------
  * @brief  used by mot_run()
  */
-static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
+static int64_t execute_step (struct _mot_ctl_ *mc, uint64_t timediff)
 {
-    int64_t latency;
+    uint64_t latency;
     
     gettimeofday (&mc->start, NULL);    /* set new time */   
     mot_step (mc);                      /* Execute step */
     mc->current_stepcount++;            /* Increase step counter */
-    mc->runtime = difference_micro (&mc->run_start, &mc->stop); 
+    mc->runtime = (uint64_t) difference_micro (&mc->run_start, &mc->stop); 
 
     if ((latency = timediff - mc->current_steptime) > mc->max_latency)    /* check max latency */
         mc->max_latency = latency;   
@@ -134,12 +138,23 @@ static int64_t execute_step (struct _mot_ctl_ *mc, int64_t timediff)
     return latency;
 }
 /*! --------------------------------------------------------------------
+ *  @brief  used by mot_run(). see: state MOT_RUN_MD
+ */
+static inline void switch_dir (struct _mot_ctl_ *mc, double new_omega)
+{
+    if (new_omega < 0.0) {
+        mot_set_dir (mc, MOT_CCW);
+    } else if (new_omega > 0.0) {
+        mot_set_dir (mc, MOT_CW);
+    }
+}
+/*! --------------------------------------------------------------------
  * @brief  used by driver thread run_A4988()
  */
 static int mot_run (struct _mot_ctl_ *mc)
 {
-    int64_t timediff;
-    static int64_t latency; 
+    uint64_t timediff;
+    static uint64_t latency; 
     
     switch (mc->mode) {        
         case MOT_START_RUN:
@@ -177,7 +192,7 @@ static int mot_run (struct _mot_ctl_ *mc)
         case MOT_RUN_SPEED_DOWN:
         case MOT_RUN_SPEED_MD:
             gettimeofday (&mc->stop, NULL); 
-            if ((timediff = difference_micro (&mc->start, &mc->stop)) >= (mc->current_steptime - latency)) {    /* Execute step */
+            if ((timediff = (uint64_t)difference_micro (&mc->start, &mc->stop)) >= (mc->current_steptime - latency)) {    /* Execute step */
                 latency = execute_step (mc, timediff);                  
                 
                 if (((mc->mode == MOT_RUN) || (mc->mode == MOT_RUN_SPEED_UP)) && (mc->a_stop > 0.0)) {          /* See if you need to brake. */
@@ -217,10 +232,8 @@ static int mot_run (struct _mot_ctl_ *mc)
                     double t;
                     double new_omega;
                     if (mc->mc_mp->a == 0.0) {                     /* omega const. */
-                        new_omega = mc->mc_mp->omega;
-                        
-                        if (new_omega < 0.0) mot_set_dir (mc, MOT_CCW);
-                        else mot_set_dir (mc, MOT_CW);
+                        new_omega = mc->mc_mp->omega;                        
+                        switch_dir (mc, new_omega);                 /* inline function */
                         
                         t = mc->phi_per_step / new_omega;
                     } else {                        
@@ -230,9 +243,7 @@ static int mot_run (struct _mot_ctl_ *mc)
                             faktor = -1.0;   
                         }
                         new_omega = sqrt((mc->current_omega * mc->current_omega) + 2.0*(mc->mc_mp->a)*faktor*mc->phi_per_step) * faktor;
-                        
-                        if (new_omega < 0.0) mot_set_dir (mc, MOT_CCW);
-                        else mot_set_dir (mc, MOT_CW);
+                        switch_dir (mc, new_omega);                 /* inline function */
                         
                         t = (2.0 * faktor*mc->phi_per_step) / (mc->current_omega + new_omega);
                     }                    
@@ -251,7 +262,7 @@ static int mot_run (struct _mot_ctl_ *mc)
                 mc->mc_mp = mc->mc_mp->next;       /* set the next motion-point in the struct _mot_ctl_ */
                 if (!mc->mc_mp) {
                     mc->mode = MOT_JOB_READY;                    
-                } else {                    
+                } else {                          
                     if (mc->mc_mp->delta_t != 0.0) {
                         mc->mc_mp->current_step = 0;
                         mc->current_omega = mc->mc_mp->prev->omega;
@@ -260,13 +271,14 @@ static int mot_run (struct _mot_ctl_ *mc)
                 }                                
             }
             break;
-        case MOT_JOB_READY: 
+        case MOT_JOB_READY:             
             mc->mode = MOT_IDLE;
             mc->flag.aktiv = 0;
-            printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us\n", 
+            printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us   real_stepcout=%lli\n", 
                      (long long int) mc->max_latency, 
                      (long long unsigned) mc->current_stepcount, 
-                     (long long int) mc->runtime);            
+                     (long long int) mc->runtime,
+                     (long long int) mc->real_stepcount);
             break;
     }    
     return EXIT_SUCCESS;
@@ -399,7 +411,8 @@ struct _mot_ctl_ *new_mot (uint8_t pin_enable,
     digitalWrite (mc->mp.step_pin, 0);
 #endif
     
-    mc->steps_per_turn = steps_per_turn;   
+    mc->steps_per_turn = steps_per_turn;  
+    mc->real_stepcount = 0; 
     mc->phi_per_step = 2.0 * M_PI / (double)mc->steps_per_turn;    
         
     mc->num_steps = -1;
@@ -477,6 +490,36 @@ int count_mot (void)
     }
     
     return count;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */ 
+int check_mc_pointer (struct _mot_ctl_ *mc)
+{
+    struct _mot_ctl_ *m = first_mc;
+    
+    while (m) {
+        if (m == mc) 
+            return EXIT_SUCCESS;
+        m = m->next;
+    }
+    
+    return EXIT_FAILURE;
+}
+/*! --------------------------------------------------------------------
+ * 
+ */ 
+void show_mot_ctl (struct _mot_ctl_ *mc)
+{
+    if (check_mc_pointer(mc) == EXIT_FAILURE) {
+        printf ("-- ERROR in func show_mot_ctl(). Parameter is incorrect\n");
+        return;
+    }
+    
+    printf ("max_latency=%lli\n", (long long int)mc->max_latency);
+    printf ("current_stepcount=%llu\n", (unsigned long long)mc->current_stepcount);
+    printf ("real_stepcount=%lli\n", (long long int)mc->real_stepcount);
+    
 }
 /*! --------------------------------------------------------------------
  * @param  *mc  motor handle
@@ -571,7 +614,7 @@ int mot_on_step (struct _mot_ctl_ *mc, uint8_t dir)
         
     mot_enable (mc);
     mot_set_dir (mc, dir);
-    mot_step (mc);
+    mot_step (mc);              /* Execute step */
         
     return EXIT_SUCCESS;
 }
@@ -600,7 +643,7 @@ int mot_start_md (struct _motion_diagram_ *md)
         return EXIT_FAILURE;
     }
     
-    mot_enable (md->mc);
+    mot_enable (md->mc);                            /* switch motor ON */
     md->mc->max_latency = 0;
     md->mc->current_stepcount = 0;
     md->mc->mc_mp = md->first_mp;                   /* set first moition-point */
@@ -750,16 +793,21 @@ struct _motion_diagram_ *new_md (struct _mot_ctl_ *mc)
  * @brief   a new motion diagram is created from file
  * @param   speedformat = [speed, FREQ, RPM]; see: enum SPEEDFORMAT 
  * @example     file (RPM Format / Line 1:  180 1/min  1,5s):
+ *                  # Hz  s    Kommentar
  *                  180  1.5
  *                  240  3
  *                  50   5.5
  * @param   if speedformat == STEP the file format is FREQ and STEPS
  */ 
+#define MAX_CHAR 1024
+ 
 struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fname, uint8_t speedformat)
 {
     FILE *f;
     struct _motion_diagram_ *md = NULL;
-    float_t speed, t;
+    float_t speed, t;    
+    char str[MAX_CHAR];
+    uint16_t n;
     
     if ((f = fopen (fname, "r+t")) == NULL) {
         printf ("-- File <%s> not found\n", fname);
@@ -767,20 +815,30 @@ struct _motion_diagram_ *new_md_from_file (struct _mot_ctl_ *mc, const char *fna
     }
     
     md = new_md (mc);
-    while (fscanf (f, "%f %f\n", &speed, &t) != EOF) {    
-        switch (speedformat) {
-            case OMEGA:
-                add_mp_omega (md, speed, t);    /* file format =  RPM[1/rad] and t[s] */
-                break;
-            case FREQ:
-                add_mp_Hz (md, speed, t);       /* file format =  RPM[1/s] and t[s] */
-                break;
-            case RPM:
-                add_mp_rpm (md, speed, t);      /* file format =  RPM[1/min] and t[s] */
-                break;
-            case STEP:
-                add_mp_steps (md, speed, t);    /* file format =  FREQ[1/s] and STEPS */
-                break;
+    while (fgets (str, MAX_CHAR, f)) {
+        n=0;
+        while (str[n] == ' ') n++;
+        if (str[n] != '#') {
+            int anz_arg;
+            if ((anz_arg = sscanf (str, "%f %f\n", &speed, &t)) != 2) {
+                if (anz_arg > 0) 
+                    printf ("param count incorrekt: %s\n", str);
+            } else {
+                switch (speedformat) {
+                    case OMEGA:
+                        add_mp_omega (md, speed, t);    /* file format =  OMEGA[1/rad] and t[s] */
+                        break;
+                    case FREQ:
+                        add_mp_Hz (md, speed, t);       /* file format =  FREQ[1/s] and t[s] */
+                        break;
+                    case RPM:
+                        add_mp_rpm (md, speed, t);      /* file format =  RPM[1/min] and t[s] */
+                        break;
+                    case STEP:                        
+                        add_mp_steps (md, speed, t);    /* file format =  FREQ[1/s] and STEPS */
+                        break;
+                }
+            }                                    
         }
     }
     fclose (f);
@@ -959,6 +1017,9 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
  *           install gnuplot with: 
  *           sudo apt-get install gnuplot gnuplot-x11 gnuplot-doc 
  */
+ 
+#define STRETCH_FAKTOR 1.3
+
 int gnuplot_md (struct _motion_diagram_ *md)
 {
     FILE *gp;    
@@ -994,8 +1055,8 @@ int gnuplot_md (struct _motion_diagram_ *md)
     fprintf (gp, "set xzeroaxis lt 2 lw 1 lc rgb \"#FF0000\"\n");
     fprintf (gp, "set yzeroaxis lt 2 lw 1 lc rgb \"#FF0000\"\n");
     
-    fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega/(2.0*M_PI) * 1.2, md->max_omega/(2.0*M_PI) * 1.2);    
-    fprintf (gp, "set xrange[-0.5:%4.3f]\n", md->max_t * 1.2);
+    fprintf (gp, "set yrange[%3.4f:%3.4f]\n",  md->min_omega/(2.0*M_PI) * STRETCH_FAKTOR, md->max_omega/(2.0*M_PI) * STRETCH_FAKTOR);    
+    fprintf (gp, "set xrange[-0.5:%4.3f]\n", md->max_t * STRETCH_FAKTOR);
     
     fprintf (gp, "set label 1 \"CW\" at graph -0.05, 1.05, 0 left\n");
     fprintf (gp, "set label 2 \"CCW\" at graph -0.05, -0.05, 0 left\n");
@@ -1008,7 +1069,6 @@ int gnuplot_md (struct _motion_diagram_ *md)
 }
 /*! --------------------------------------------------------------------
  * @brief  add an item to the end of the list
- *          Attention: Zero crossing is not allowed.
  */
 struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t)
 {    
@@ -1024,9 +1084,11 @@ struct _move_point_ *add_mp_Hz (struct _motion_diagram_ *md, double Hz, double t
     double omega = 2.0 * M_PI * Hz;
     if (((md->last_mp->omega > 0.0) && (omega < 0.0)) || 
         ((md->last_mp->omega < 0.0) && (omega > 0.0))) {    /* zero crossing */
-            md->data_set_is_incorrect = 2;
-            printf ("-- ERROR: zero passage \n");
-            return (NULL);
+            double dw = fabs(omega - md->last_mp->omega);
+			double dt = t - md->last_mp->t;
+            double nt = fabs(md->last_mp->omega) * (dt / dw);
+            
+			add_mp_omega (md, 0.0, md->last_mp->t + nt);    /* include zero crossing motion point */
     }
         
     struct _move_point_ *mp = (struct _move_point_ *) malloc (sizeof(struct _move_point_));    
@@ -1087,9 +1149,18 @@ struct _move_point_ *add_mp_steps (struct _motion_diagram_ *md, double Hz, doubl
 {
     if (md == NULL)
         return NULL;
+    
+    double omega = 2.0*M_PI*Hz;
+    if (((omega > 0.0) && (md->last_mp->omega < 0.0)) || 
+        ((omega < 0.0) && (md->last_mp->omega > 0.0))) {
+        double dw = omega - md->last_mp->omega;
+        double ds = steps - md->last_mp->sum_steps;
+        double ns = ds / fabs(dw) * md->last_mp->omega;
+        
+        add_mp_steps (md, 0.0, md->last_mp->sum_steps + ns);
+    }
         
     double phi = md->mc->phi_per_step * (steps - md->last_mp->sum_steps);
-    double omega = 2.0*M_PI*Hz;
     double sum_omega = md->last_mp->omega + omega;
     double t = (sum_omega == 0.0) ? 0.0 : fabs(2.0 * phi / sum_omega);
     t += md->last_mp->t;
