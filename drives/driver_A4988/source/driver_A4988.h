@@ -12,7 +12,7 @@ enum SPEEDFORMAT {
     OMEGA = 0,          /* rad/s */
     FREQ = 1,           /* s⁻1 */
     RPM = 2,            /* min⁻1 */
-    STEP = 3
+    STEP = 3            /* number of steps */
 };
 
 enum DIRECTION {

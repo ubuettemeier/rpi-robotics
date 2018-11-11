@@ -3,7 +3,7 @@ The wiringPi library is used as gpio driver.
 
 Several sensors can be evaluated.
 The example circuit diagram can be found under
-  wiki/wiring diagram.jpg 
+  schematic/wiring diagram.jpg 
 script's.
 
 script's
@@ -16,7 +16,7 @@ Als gpio-Treiber wird die wiringPi Library verwendet.
 
 Es lassen sich mehrere Sensoren auswerten.
 Der Beispiel-Schaltplan ist unter
-  wiki/wiring diagram.jpg 
+  schematic/wiring diagram.jpg 
 zu sehen.
 
 script's

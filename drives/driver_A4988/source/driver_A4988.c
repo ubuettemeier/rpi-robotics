@@ -263,7 +263,10 @@ static int mot_run (struct _mot_ctl_ *mc)
         case MOT_JOB_READY: 
             mc->mode = MOT_IDLE;
             mc->flag.aktiv = 0;
-            printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us\n", mc->max_latency, mc->current_stepcount, mc->runtime);            
+            printf ("-- max_latency=%lli us  current_stepcount=%llu  runtime=%lli us\n", 
+                     (long long int) mc->max_latency, 
+                     (long long unsigned) mc->current_stepcount, 
+                     (long long int) mc->runtime);            
             break;
     }    
     return EXIT_SUCCESS;
@@ -867,8 +870,8 @@ int show_mp (struct _move_point_ *mp)
              mp->delta_omega, 
              mp->delta_t,              
              mp->delta_phi,
-             mp->steps,
-             mp->sum_steps,
+             (long long unsigned) mp->steps,
+             (long long unsigned) mp->sum_steps,
              mp->a);
         
     return EXIT_SUCCESS;
@@ -939,7 +942,10 @@ int gnuplot_write_graph_data_file (struct _motion_diagram_ *md, const char *fnam
     fwrite (buf, strlen(buf), 1, data);
     while (mp) {          
         sum_step += mp->steps;
-        sprintf (buf, "%3.4f  %3.4f   %llu-Steps\n", mp->t, mp->omega/(2.0*M_PI), sum_step);
+        sprintf (buf, "%3.4f  %3.4f   %llu-Steps\n", 
+                      mp->t, 
+                      mp->omega/(2.0*M_PI), 
+                      (long long unsigned) sum_step);
         fwrite (buf, strlen(buf), 1, data);
         
         mp = mp->next;
@@ -1072,7 +1078,11 @@ struct _move_point_ *add_mp_rpm (struct _motion_diagram_ *md, double rpm, double
 {
     return add_mp_Hz (md, rpm / 60.0, t);
 }
-
+/*! --------------------------------------------------------------------
+ * @brief   add an item to the end of the list
+ * @param   Hz = speed [1/s]
+ *           steps = number of steps
+ */
 struct _move_point_ *add_mp_steps (struct _motion_diagram_ *md, double Hz, double steps)
 {
     if (md == NULL)

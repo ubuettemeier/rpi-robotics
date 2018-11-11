@@ -5,7 +5,7 @@ The waveshare laser sensor works as a reflex sensor.
 NO distance is determined. The laser works as obstacle detection.
 
 The example circuit diagram can be seen in 
-  wiki/wiring diagram.jpg
+  schematic/schematic.jpg
 
 script's
 - source/edit.sh => opens the source files with geany
@@ -19,7 +19,7 @@ Der waveshare laser sensor arbeitet als Reflex Sensor.
 Es wird KEINE Distanz ermittelt. Der Laser arbeitet als Hinderniserkennung.
 
 Der Beispiel-Schaltplan ist zu sehen in 
-  wiki/wiring diagram.jpg
+  schematic/schematic.jpg
 
 script's
 - source/edit.sh => öffnet die Source Files mit geany
