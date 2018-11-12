@@ -11,20 +11,23 @@ FILENAME = test_i2c_pcf8591
 # ----------------------------------------------------------------------
 SRC = \
 $(FILENAME).c \
-../../../tools/keypressed/keypressed.c
+../../../tools/keypressed/keypressed.c \
+../../../tools/rpi_tools/rpi_tools.c
 
 # ----------------------------------------------------------------------
 # Header files
 # ----------------------------------------------------------------------
 HEADER = \
-../../../tools/keypressed/keypressed.h
+../../../tools/keypressed/keypressed.h \
+../../../tools/rpi_tools/rpi_tools.h
 
 # ---------------------------------------------------------------------- 
 # Object files
 # ----------------------------------------------------------------------
 OBJ = \
 ../build/$(FILENAME).o \
-../build/keypressed.o
+../build/keypressed.o \
+../build/rpi_tools.o
 
 # ---------------------------------------------------------------------- 
 # binary code

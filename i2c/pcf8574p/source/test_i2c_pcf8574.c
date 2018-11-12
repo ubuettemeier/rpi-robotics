@@ -14,23 +14,13 @@
 #include <fcntl.h>
 
 #include "../../../tools/keypressed/keypressed.h"
+#include "../../../tools/rpi_tools/rpi_tools.h"
 
 #define PCF8574_ADDR  0x20	            /* A0, A1, A2 = GND */
 
 int device = -1;
 const uint8_t config_mask = 0x0F;     /* P0-P3 input; p4-p7 output */
 
-/*! --------------------------------------------------------------------
- *  @brief    print error text and then programm exit.
- */
-static void abort_by_error (const char *error_text, const char *func_name)
-{
-    char buf[1024];
-  
-    sprintf (buf, "%s <%s>", error_text, func_name);
-    perror (buf);
-    abort();
-}
 /*! --------------------------------------------------------------------
  *
  */

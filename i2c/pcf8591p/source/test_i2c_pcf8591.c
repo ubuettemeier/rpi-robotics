@@ -15,25 +15,21 @@
 #include <fcntl.h>
 
 #include "../../../tools/keypressed/keypressed.h"
+#include "../../../tools/rpi_tools/rpi_tools.h"
 
 #define PCF8591_ADDR  0x48	/* A0, A1, A2 = GND */
-#define ADC0 0x00
-#define ADC1 0x01
+
+enum ADC {
+    ADC0,
+    ADC1,
+    ADC2,
+    ADC3
+};
 
 int device = -1;
+
 /*! --------------------------------------------------------------------
- *  @brief    print error text and then programm exit.
- */
-static void abort_by_error (const char *error_text, const char *func_name)
-{
-    char buf[1024];
-  
-    sprintf (buf, "%s <%s>", error_text, func_name);
-    perror (buf);
-    abort();
-}
-/*! --------------------------------------------------------------------
- *  @brief   Function sets the PCF8591 ADC output channel.
+ *  @brief   Function select the PCF8591 ADC channel.
  *            ADC0 => channel = 0x00
  *            ADC1 => channel = 0x01
  *            ADC2 => channel = 0x02
@@ -44,12 +40,12 @@ static void abort_by_error (const char *error_text, const char *func_name)
  * 
  *  @return  returning negative errno else a data byte received from the device.
  */
-int set_ADC_channel (int fd, uint8_t channel)
+int select_ADC_channel (int fd, uint8_t channel)
 {
     if (fd < 0) 
         return ( -1 );                              /* check device */
         
-    return i2c_smbus_read_byte_data( fd, channel );   /* Set ADC channel and read out previous ADC value */
+    return i2c_smbus_read_byte_data( fd, channel );   /* Select ADC channel and read previous ADC value */
 }
 /*! --------------------------------------------------------------------
  *  @brief  Function sets new DAC value
@@ -91,18 +87,18 @@ int main(int argc, char *argv[])
 
 
     while (1) {        
-        set_ADC_channel ( device, ADC0 );     /* select ADC channel 0 */
-        res = i2c_smbus_read_byte (device);   /* read ADC0 */
+        select_ADC_channel ( device, ADC0 );    /* select ADC channel 0 */
+        res = i2c_smbus_read_byte (device);     /* read ADC0 */
         printf ("ADC0=%3i  ", res);
         
-        set_ADC_channel ( device, ADC1 );     /* select ADC channel 1 */
-        res = i2c_smbus_read_byte (device);   /* read ADC1 */
+        select_ADC_channel ( device, ADC1 );    /* select ADC channel 1 */
+        res = i2c_smbus_read_byte (device);     /* read ADC1 */
         printf ("ADC1=%3i  ", res);
         
         res = set_DAC_value (device, (dac_value += 0x10));    /* set new DAC value */
         printf ("DAC=%i\n", (res >= 0) ? dac_value : res); 
         
-        usleep (10000);                       /* wait 10 ms */
+        usleep (10000);                         /* wait 10 ms */
         
         while ((taste = check_keypressed(&c)) <= 0);  /* wait for keypressed */
         if (c == 27) break;                           /* quit by ESC */

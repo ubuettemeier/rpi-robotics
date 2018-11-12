@@ -14,17 +14,8 @@
 #include <linux/i2c-dev.h>
 #include <fcntl.h>
 
-/*! --------------------------------------------------------------------
- *  @brief    print error text and then programm exit.
- */
-static void abort_by_error (const char *error_text, const char *func_name)
-{
-    char buf[1024];
-  
-    sprintf (buf, "%s <%s>", error_text, func_name);
-    perror (buf);
-    abort();
-}
+#include "../../../tools/rpi_tools/rpi_tools.h"
+
 /*! --------------------------------------------------------------------
  *  @brief  function works like 
  *            sudo i2cdetect -y 1

@@ -1,31 +1,45 @@
 
 CC = gcc
 
+
 CFLAGS = -Wall -c -O0 -DNDEBUG
-FLAGS =
-INC=
 LDFLAGS =
 
 FILENAME = test_i2c
-OUTPUTFOLDER = ../build
 
-SOURCE = $(FILENAME).c 
-HEADER =
-QUELLE = $(SOURCE) $(HEADER)
+# ----------------------------------------------------------------------
+# Source files
+# ----------------------------------------------------------------------
+SRC = \
+$(FILENAME).c \
+../../../tools/rpi_tools/rpi_tools.c
 
-OBJ	= $(SOURCE:.c=.o)
-BIN = $(FILENAME)
+# ----------------------------------------------------------------------
+# Header files
+# ----------------------------------------------------------------------
+HEADER = \
+../../../tools/rpi_tools/rpi_tools.h
+
+# ---------------------------------------------------------------------- 
+# Object files
+# ----------------------------------------------------------------------
+OBJ = \
+../build/$(FILENAME).o \
+../build/rpi_tools.o
+
+# ---------------------------------------------------------------------- 
+# binary code
+# ----------------------------------------------------------------------
+BIN = ../build/$(FILENAME)
 
 $(BIN): $(OBJ)
-	$(CC) -o $(BIN) $(OBJ) $(LDFLAGS)
-	mv *.o $(OUTPUTFOLDER)
-	mv $(FILENAME) $(OUTPUTFOLDER)
+	$(CC) $(OBJ) -o $(BIN) $(LDFLAGS)
 
-$(OBJ): $(QUELLE) $(HEADER)	
-	$(CC) $(CFLAGS) $(FLAGS) $(INC) $(SOURCE)
+$(OBJ) : $(SRC) $(HEADER)
+	$(CC) -c $(CFLAGS) $(SRC)
+	mv *.o ../build
 
 .PHONEY:	clean
 clean:
-	rm -rf $(OBJ)
-	rm -rf $(FILENAME)
+	rm -rf $(OBJ) $(BIN)
 

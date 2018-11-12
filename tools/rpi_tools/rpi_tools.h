@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <sys/time.h>
 
+extern void abort_by_error (const char *error_text, const char *func_name);
+
 extern int64_t difference_micro (struct timeval *start, struct timeval *stop);  /* calculates time difference in us */
 extern int64_t current_difference_micro (struct timeval *start);
 

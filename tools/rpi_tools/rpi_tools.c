@@ -5,12 +5,24 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/time.h>
 
 #include "rpi_tools.h"
 
+/*! --------------------------------------------------------------------
+ *  @brief    print error text and then programm exit.
+ */
+void abort_by_error (const char *error_text, const char *func_name)
+{
+    char buf[1024];
+  
+    sprintf (buf, "%s <%s>", error_text, func_name);
+    perror (buf);
+    abort();
+}
 /*!	--------------------------------------------------------------------
  * @brief   calculates time difference in us
  * @return  stop - start

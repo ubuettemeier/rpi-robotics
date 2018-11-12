@@ -14,6 +14,7 @@
 #include <linux/i2c-dev.h>
 
 #include "../../../tools/keypressed/keypressed.h"
+#include "../../../tools/rpi_tools/rpi_tools.h"
 
 #define ADDR_24CXX  0x50   /* 0x50...0x57 */
 
@@ -36,17 +37,6 @@ typedef struct _data_block_ {
 } data_block;
 
 int device = -1;
-/*! --------------------------------------------------------------------
- *  @brief    print error text and then programm exit.
- */
-static void abort_by_error (const char *error_text, const char *func_name)
-{
-    char buf[1024];
-  
-    sprintf (buf, "%s <%s>", error_text, func_name);
-    perror (buf);
-    abort();
-}
 /*! --------------------------------------------------------------------
  *
  */
