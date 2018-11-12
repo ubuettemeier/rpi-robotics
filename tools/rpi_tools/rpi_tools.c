@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sched.h>
 
 #include "rpi_tools.h"
 
@@ -35,14 +36,14 @@ int64_t difference_micro (struct timeval *start, struct timeval *stop)
            (int64_t) start->tv_usec);
 }
 /*! --------------------------------------------------------------------
- * 
+ *  @return current time - start [us]
  */
 int64_t current_difference_micro (struct timeval *start)
 {
     struct timeval stop;
     
     gettimeofday (&stop, NULL);
-    return difference_micro (start, &stop);
+    return difference_micro (start, &stop);     /* return (current - start) */
 }
 /*! --------------------------------------------------------------------
  * @brief   function displays progress bar

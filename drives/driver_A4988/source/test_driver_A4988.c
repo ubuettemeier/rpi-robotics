@@ -31,7 +31,8 @@ struct _mot_ctl_ *m1 = NULL;
 /*! --------------------------------------------------------------------
  * 
  */
-#define USE_MOTION_PROFIL_4
+ 
+#define USE_MOTION_PROFIL_5
 
 static inline void init_motion_diagram (struct _motion_diagram_ *md)
 {
@@ -131,7 +132,7 @@ int main(int argc, char *argv[])
     struct _motion_diagram_ *md = NULL;
     
     init_mot_ctl ();
-    show_usleep (1000000, 100000);       /* see: rpi_tools.h */
+    show_usleep (1000000, 100000/2);       /* see: rpi_tools.h */
     
     m1 = new_mot (ENABLE_PIN_M1, DIR_PIN_M1, STEP_PIN_M1, STEPS_PER_TURN);  /* create motor 1 */
 

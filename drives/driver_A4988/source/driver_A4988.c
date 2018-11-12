@@ -1024,12 +1024,13 @@ int gnuplot_md (struct _motion_diagram_ *md)
 {
     FILE *gp;    
         
-    if (md) {        
+    if (md != NULL) {        
         if (check_md_pointer(md) != EXIT_SUCCESS) {              /* check parameter md */
             printf ("-- Can't find motion-diagram\n");
             return EXIT_FAILURE;
         }
     } else {
+        printf ("-- diagram pointer is empty\n");
         return EXIT_FAILURE;
     }
     

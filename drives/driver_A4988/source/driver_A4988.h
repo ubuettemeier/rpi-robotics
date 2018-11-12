@@ -36,7 +36,7 @@ enum MOT_STATE {                /* see: function mot_run() */
     MOT_JOB_READY = 0x80
 };
 
-struct _thread_state_ {         /* thread state => see: void *run_A4988() */
+struct _thread_state_ {        /* thread state => see: void *run_A4988() */
     unsigned run: 1;
     unsigned mc_closed: 1;
     unsigned kill: 1;
