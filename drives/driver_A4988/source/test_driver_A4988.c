@@ -118,6 +118,7 @@ static void help()
     printf ("c = read motion diagram from file <curve_1.dat>\n");
     printf ("v = read motion diagram from file <curve_2.dat>\n");
     printf ("g = draw motion diagram with gnuplot\n");
+    printf ("k = kill motion diagram pointer\n");
 }
 /*! --------------------------------------------------------------------
  * 
